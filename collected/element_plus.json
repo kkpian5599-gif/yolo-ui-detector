@@ -1,0 +1,65 @@
+{
+  "source": "Element Plus (element-plus.org)",
+  "button_patterns": {
+    "solid": {
+      "colors": ["#409eff", "#67c23a", "#e6a23c", "#f56c6c", "#909399"],
+      "text_color": "#ffffff",
+      "border_radius": "4px",
+      "padding": "8px 15px",
+      "font_size": "14px",
+      "height": "32px",
+      "border": "1px solid same-as-bg"
+    },
+    "outline": {
+      "bg": "#ffffff",
+      "text": "#606266",
+      "border": "1px solid #dcdfe6",
+      "border_radius": "4px",
+      "padding": "8px 15px",
+      "height": "32px"
+    },
+    "plain": {
+      "bg": ["#ecf5ff", "#f0f9eb", "#fdf6ec", "#fef0f0", "#f4f4f5"],
+      "text": "matches theme color",
+      "border": ["#a0cfff", "#b3e19d", "#f3d19e", "#fab6b6", "#c8c9cc"],
+      "padding": "8px 15px"
+    },
+    "dashed": {
+      "border_style": "dashed",
+      "same_as": "outline or plain"
+    },
+    "round": {
+      "border_radius": "20px",
+      "same_as": "solid/outline otherwise"
+    },
+    "circle": {
+      "border_radius": "50%",
+      "width_height": "32px",
+      "padding": "8px"
+    },
+    "text": {
+      "bg": "transparent",
+      "text": "theme color",
+      "border": "none",
+      "padding": "2px to 8px 15px"
+    },
+    "text_bg": {
+      "bg": "#f5f7fa",
+      "text": "theme color"
+    },
+    "sizes": {
+      "large": {"height": "40px", "padding": "12px 19px", "radius": "4px"},
+      "default": {"height": "32px", "padding": "8px 15px", "radius": "4px"},
+      "small": {"height": "24px", "padding": "5px 11px", "radius": "3px"}
+    },
+    "disabled": {
+      "solid": "bg becomes lighter tint, cursor not-allowed",
+      "outline": "text #a8abb2, border #e4e7ed, cursor not-allowed",
+      "plain": "lighter bg/border/text, cursor not-allowed"
+    },
+    "custom_color_example": {
+      "theme": "#626aef",
+      "same_patterns_as": "primary set"
+    }
+  }
+}

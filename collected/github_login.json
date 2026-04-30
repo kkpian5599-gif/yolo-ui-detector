@@ -1,0 +1,222 @@
+{
+  "url": "https://github.com/login",
+  "total": 15,
+  "elements": [
+    {
+      "tag": "input",
+      "type": "text",
+      "text": "",
+      "bbox": {
+        "x": 457,
+        "y": 187,
+        "w": 352,
+        "h": 40
+      },
+      "styles": {
+        "bg": "rgb(255, 255, 255)",
+        "color": "rgb(31, 35, 40)",
+        "border": "1px solid rgb(9, 105, 218)",
+        "borderRadius": "6px",
+        "padding": "5px 12px",
+        "fontSize": "16px",
+        "boxShadow": "rgb(9, 105, 218) 0px 0px 0px 1px inset",
+        "cursor": "text",
+        "display": "inline-block",
+        "opacity": "1"
+      },
+      "note": "focused input"
+    },
+    {
+      "tag": "input",
+      "type": "password",
+      "text": "",
+      "bbox": {
+        "x": 457,
+        "y": 268,
+        "w": 352,
+        "h": 40
+      },
+      "styles": {
+        "bg": "rgb(255, 255, 255)",
+        "color": "rgb(31, 35, 40)",
+        "border": "1px solid rgb(209, 217, 224)",
+        "borderRadius": "6px",
+        "padding": "5px 12px",
+        "fontSize": "16px",
+        "boxShadow": "rgba(31, 35, 40, 0.04) 0px 1px 0px 0px inset",
+        "cursor": "text",
+        "display": "inline-block",
+        "opacity": "1"
+      },
+      "note": "normal input"
+    },
+    {
+      "tag": "input",
+      "type": "submit",
+      "text": "",
+      "bbox": {
+        "x": 457,
+        "y": 324,
+        "w": 352,
+        "h": 40
+      },
+      "styles": {
+        "bg": "rgb(31, 136, 61)",
+        "color": "rgb(255, 255, 255)",
+        "border": "1px solid rgba(31, 35, 40, 0.15)",
+        "borderRadius": "6px",
+        "padding": "5px 16px",
+        "fontSize": "14px",
+        "boxShadow": "none",
+        "cursor": "pointer",
+        "display": "block",
+        "opacity": "1"
+      },
+      "note": "primary submit button"
+    },
+    {
+      "tag": "button",
+      "type": "submit",
+      "text": "Continue with Google",
+      "bbox": {
+        "x": 457,
+        "y": 425,
+        "w": 352,
+        "h": 40
+      },
+      "styles": {
+        "bg": "rgb(246, 248, 250)",
+        "color": "rgb(37, 41, 46)",
+        "border": "1px solid rgb(209, 217, 224)",
+        "borderRadius": "6px",
+        "padding": "0px 12px",
+        "fontSize": "14px",
+        "boxShadow": "none",
+        "cursor": "pointer",
+        "display": "flex",
+        "opacity": "1"
+      },
+      "note": "outline button"
+    },
+    {
+      "tag": "a",
+      "type": "",
+      "text": "Forgot password?",
+      "bbox": {
+        "x": 696,
+        "y": 243,
+        "w": 112,
+        "h": 21
+      },
+      "styles": {
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(9, 105, 218)",
+        "border": "0px none rgb(9, 105, 218)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "fontSize": "14px",
+        "boxShadow": "none",
+        "cursor": "pointer",
+        "display": "block",
+        "opacity": "1"
+      },
+      "note": "text link"
+    },
+    {
+      "tag": "a",
+      "type": "",
+      "text": "Create an account",
+      "bbox": {
+        "x": 627,
+        "y": 535,
+        "w": 114,
+        "h": 16
+      },
+      "styles": {
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(9, 105, 218)",
+        "border": "0px none rgb(9, 105, 218)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "fontSize": "14px",
+        "boxShadow": "none",
+        "cursor": "pointer",
+        "display": "inline",
+        "opacity": "1"
+      },
+      "note": "inline link"
+    },
+    {
+      "tag": "a",
+      "type": "",
+      "text": "Terms",
+      "bbox": {
+        "x": 279,
+        "y": 625,
+        "w": 33,
+        "h": 14
+      },
+      "styles": {
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(89, 99, 110)",
+        "border": "0px none rgb(89, 99, 110)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "fontSize": "12px",
+        "boxShadow": "none",
+        "cursor": "pointer",
+        "display": "inline",
+        "opacity": "1"
+      },
+      "note": "footer link"
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "text": "Sign in with a passkey",
+      "bbox": {
+        "x": 563,
+        "y": 570,
+        "w": 139,
+        "h": 21
+      },
+      "styles": {
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(9, 105, 218)",
+        "border": "0px none rgb(9, 105, 218)",
+        "borderRadius": "6px",
+        "padding": "0px",
+        "fontSize": "14px",
+        "boxShadow": "none",
+        "cursor": "pointer",
+        "display": "inline-block",
+        "opacity": "1"
+      },
+      "note": "text button (link style)"
+    },
+    {
+      "tag": "button",
+      "type": "button",
+      "text": "Manage cookies",
+      "bbox": {
+        "x": 642,
+        "y": 623,
+        "w": 87,
+        "h": 18
+      },
+      "styles": {
+        "bg": "rgba(0, 0, 0, 0)",
+        "color": "rgb(89, 99, 110)",
+        "border": "0px none rgb(89, 99, 110)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "fontSize": "12px",
+        "boxShadow": "none",
+        "cursor": "pointer",
+        "display": "inline-block",
+        "opacity": "1"
+      },
+      "note": "footer text button"
+    }
+  ]
+}

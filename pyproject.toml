@@ -1,0 +1,17 @@
+[project]
+name = "yolo-ui-generator"
+version = "0.1.0"
+description = "合成网页UI截图数据，用于YOLO训练"
+requires-python = ">=3.10, <3.13"
+
+dependencies = [
+    "playwright>=1.40",
+    "opencv-python>=4.8",
+]
+
+[project.optional-dependencies]
+train = [
+    "torch>=2.1",
+    "torchvision>=0.16",
+    "ultralytics>=8.1",
+]

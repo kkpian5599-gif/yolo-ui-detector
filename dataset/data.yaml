@@ -1,0 +1,15 @@
+# YOLO training config (auto-generated)
+path: C:/Users/Administrator/Desktop/yolo_data/dataset
+train: images
+val: images
+
+nc: 8
+names:
+  - button
+  - input
+  - checkbox
+  - radio
+  - select
+  - textarea
+  - link
+  - icon

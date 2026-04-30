@@ -1,0 +1,33 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated dataset (don't track large binary files)
+dataset/images/
+dataset/labels/
+
+# Keep data.yaml (config, not data)
+!dataset/data.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright browsers (downloaded separately)
+playwright-browsers/
+
+# Training artifacts
+runs/
+wandb/
+*.pt
+*.onnx
