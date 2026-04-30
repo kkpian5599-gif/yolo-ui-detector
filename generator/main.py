@@ -31,8 +31,13 @@ def main():
 
             if (i + 1) % 20 == 0:
                 print(f"  [{i+1:4d}/{count}] {n_labels} labels | total: {total_labels}")
+        except KeyboardInterrupt:
+            print(f"\n  Interrupted at [{i+1}/{count}]")
+            break
         except Exception as e:
+            import traceback
             print(f"  [{i+1:4d}/{count}] ERROR: {e}")
+            traceback.print_exc()
 
     generate_data_yaml(output_dir, CLASSES)
     print(f"Done! {count} images, {total_labels} labels")

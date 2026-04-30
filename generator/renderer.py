@@ -81,9 +81,9 @@ def map_to_class(tag, el_type, class_name, text):
     """将DOM元素映射到YOLO类别ID"""
     # 先检查是否是弹窗/遮罩
     if "modal-overlay" in class_name:
-        return 9  # 预留：暂不加入训练类别，手动处理
+        return 8  # modal
     if "overlay-area" in class_name:
-        return 9
+        return 8  # modal
 
     if tag == "button":
         return 0  # button

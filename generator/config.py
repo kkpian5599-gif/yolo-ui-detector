@@ -1,9 +1,20 @@
 """读取样式画像，定义YOLO类别映射"""
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-STYLE_PROFILE = json.loads((ROOT / "collected" / "style_profile.json").read_text(encoding="utf-8"))
+PROFILE_PATH = ROOT / "collected" / "style_profile.json"
+
+try:
+    STYLE_PROFILE = json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    print(f"ERROR: style_profile.json not found at {PROFILE_PATH}", file=sys.stderr)
+    print("Run Phase A first: use browser to collect CSS styles from real websites.", file=sys.stderr)
+    sys.exit(1)
+except json.JSONDecodeError as e:
+    print(f"ERROR: Invalid JSON in {PROFILE_PATH}: {e}", file=sys.stderr)
+    sys.exit(1)
 
 # YOLO 类别定义
 CLASSES = [
@@ -15,6 +26,7 @@ CLASSES = [
     "textarea",    # 5: 多行文本框
     "link",        # 6: 超链接
     "icon",        # 7: 图标
+    "modal",       # 8: 弹窗/遮罩
 ]
 
 CLASS2ID = {name: i for i, name in enumerate(CLASSES)}
