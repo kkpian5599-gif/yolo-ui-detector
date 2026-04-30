@@ -18,7 +18,7 @@ def render_page(html: str, width: int, height: int, output_dir: Path, index: int
     html_path = tmp.name
 
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(channel="msedge")
         page = browser.new_page(viewport={"width": width, "height": height})
         page.goto(f"file://{html_path}")
 
