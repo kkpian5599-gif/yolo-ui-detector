@@ -6,12 +6,8 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Generated dataset (don't track large binary files)
-dataset/images/
-dataset/labels/
-
-# Keep data.yaml (config, not data)
-!dataset/data.yaml
+# Generated dataset — small enough for git (300 images ≈ 7MB)
+# Regenerate with: python -m generator.main 300
 
 # IDE
 .vscode/
