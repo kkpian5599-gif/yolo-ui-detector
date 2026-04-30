@@ -16,13 +16,23 @@ def main():
             pass
 
     output_dir = ROOT / "dataset"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    images_dir = output_dir / "images"
+    labels_dir = output_dir / "labels"
+    images_dir.mkdir(parents=True, exist_ok=True)
+    labels_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Generating {count} synthetic pages -> {output_dir}")
+    # 自动续传：检测已有图片数量，接着往后生成
+    existing = len(list(images_dir.glob("*.jpg")))
+    if existing > 0:
+        print(f"Found {existing} existing images, resuming from #{existing}")
+    start = existing
+    end = start + count
+
+    print(f"Generating {count} synthetic pages (#{start} -> #{end-1}) -> {output_dir}")
     print(f"Classes: {CLASSES}")
 
     total_labels = 0
-    for i in range(count):
+    for i in range(start, end):
         try:
             html, width, height, _meta = generate_page()
             img_path, bboxes = render_page(html, width, height, output_dir, i)
