@@ -6,8 +6,13 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Generated dataset — small enough for git (300 images ≈ 7MB)
-# Regenerate with: python -m generator.main 300
+# Generated dataset — regenerate on target machine
+# Cloud: python -m generator.main 300
+dataset/images/
+dataset/labels/
+
+# Keep data.yaml (config, not data)
+!dataset/data.yaml
 
 # IDE
 .vscode/
