@@ -292,32 +292,110 @@ def generate_radio_html():
 
 
 def generate_select_html():
-    """生成下拉选择框"""
-    options = random.sample(["请选择", "选项1", "选项2", "选项3", "北京", "上海", "广州", "深圳",
-                             "Choose...", "Option A", "Option B", "Option C"],
-                            random.randint(3, 5))
+    """生成下拉选择框 — 多种设计风格"""
+    options_zh = ["请选择", "北京", "上海", "广州", "深圳", "成都", "杭州", "武汉",
+                  "男", "女", "保密", "启用", "禁用", "待审核",
+                  "选项A", "选项B", "选项C", "选项D"]
+    options_en = ["Choose...", "Option A", "Option B", "Option C",
+                  "All", "Active", "Inactive", "Pending",
+                  "Small", "Medium", "Large", "X-Large"]
+    options = random.sample(random.choice([options_zh, options_en]), random.randint(3, 5))
     disabled = random.random() < 0.05
 
-    style = (
-        f"width:{random.randint(150,300)}px;"
-        f"height:38px;"
-        f"padding:6px 36px 6px 12px;"
-        f"font-size:14px;"
-        f"border-radius:6px;"
-        f"border:1px solid #dee2e6;"
-        f"background:#fff;"
-        f"color:#212529;"
-        f"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
-        f"appearance:none;"
-        f"background-image:url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\"><path fill=\"none\" stroke=\"%23333\" stroke-width=\"2\" d=\"M2 5l6 6 6-6\"/></svg>');"
+    w = random.randint(120, 320)
+    style_type = random.choices(
+        ["standard", "ant_design", "element_plus", "filled", "borderless", "rounded"],
+        weights=[25, 20, 20, 15, 10, 10]
+    )[0]
+
+    # 下拉箭头 SVG
+    arrow_svg = "url('data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 16 16%22%3E%3Cpath fill%3D%22none%22 stroke%3D%22%23666%22 stroke-width%3D%222%22 d%3D%22M2 5l6 6 6-6%22%2F%3E%3C%2Fsvg%3E')"
+    arrow_dark = "url('data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 16 16%22%3E%3Cpath fill%3D%22none%22 stroke%3D%22%23999%22 stroke-width%3D%222%22 d%3D%22M2 5l6 6 6-6%22%2F%3E%3C%2Fsvg%3E')"
+
+    base_arrow = (
+        f"appearance:none;-webkit-appearance:none;"
+        f"background-image:{arrow_svg};"
         f"background-repeat:no-repeat;"
-        f"background-position:right 12px center;"
+        f"background-position:right 10px center;"
         f"background-size:12px;"
         f"cursor:{'not-allowed' if disabled else 'pointer'};"
     )
-    option_html = "".join(f'<option>{"selected " if i == 0 else ""}{o}</option>' for i, o in enumerate(options))
-    html = f'<select{" disabled" if disabled else ""} style="{style}">{option_html}</select>'
-    return html, {"type": "select", "options": len(options), "disabled": disabled}
+
+    if style_type == "standard":
+        style = (
+            f"width:{w}px;height:38px;padding:6px 32px 6px 12px;"
+            f"font-size:14px;border-radius:6px;"
+            f"border:1px solid #dee2e6;background:#fff;color:#212529;"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            f"{base_arrow}"
+        )
+    elif style_type == "ant_design":
+        # Ant Design 风格：4px 圆角，hover 蓝色边框
+        size = random.choice(["sm", "md", "lg"])
+        h = {"sm": "24px", "md": "32px", "lg": "40px"}[size]
+        fs = {"sm": "12px", "md": "14px", "lg": "16px"}[size]
+        style = (
+            f"width:{w}px;height:{h};padding:0 30px 0 11px;"
+            f"font-size:{fs};border-radius:4px;"
+            f"border:1px solid #d9d9d9;background:#fff;color:#000000d9;"
+            f"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"
+            f"{base_arrow}"
+        )
+    elif style_type == "element_plus":
+        # Element Plus 风格：6px 圆角，灰色边框
+        size = random.choice(["default", "large", "small"])
+        h = {"small": "28px", "default": "32px", "large": "40px"}[size]
+        style = (
+            f"width:{w}px;height:{h};padding:0 30px 0 12px;"
+            f"font-size:14px;border-radius:6px;"
+            f"border:1px solid #dcdfe6;background:#fff;color:#606266;"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            f"{base_arrow}"
+        )
+    elif style_type == "filled":
+        bg = random.choice(["#f0f2f5", "#f5f5f5", "#f2f4f7", "#eef0f3"])
+        style = (
+            f"width:{w}px;height:36px;padding:6px 30px 6px 12px;"
+            f"font-size:14px;border-radius:8px;"
+            f"border:none;background:{bg};color:#333;"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            f"{base_arrow.replace(arrow_svg, arrow_dark)}"
+        )
+    elif style_type == "borderless":
+        style = (
+            f"width:{w}px;height:32px;padding:4px 28px 4px 8px;"
+            f"font-size:14px;border-radius:4px;"
+            f"border:none;background:transparent;color:#333;"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            f"{base_arrow}"
+        )
+    else:  # rounded
+        color = random.choice(["#0d6efd", "#1677ff", "#7c3aed", "#059669"])
+        style = (
+            f"width:{w}px;height:36px;padding:6px 30px 6px 14px;"
+            f"font-size:14px;border-radius:20px;"
+            f"border:2px solid {color};background:#fff;color:{color};"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            f"{base_arrow}"
+        )
+
+    if disabled:
+        style += "opacity:0.6;"
+
+    option_html = "".join(
+        f'<option{"" if i else " selected"}>{o}</option>'
+        for i, o in enumerate(options)
+    )
+    html = f'<select{"  disabled" if disabled else ""} style="{style}">{option_html}</select>'
+
+    # label (60% 概率)
+    if random.random() < 0.6:
+        lbl = random.choice(["性别", "城市", "状态", "类型", "分类",
+                              "Gender", "City", "Status", "Type", "Category"])
+        lbl_style = "display:block;font-size:13px;margin-bottom:4px;color:#555;"
+        html = f'<label style="{lbl_style}">{lbl}</label>{html}'
+
+    return html, {"type": "select", "style": style_type, "options": len(options), "disabled": disabled}
 
 
 def generate_textarea_html():

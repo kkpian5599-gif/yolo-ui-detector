@@ -1,115 +1,129 @@
 #!/bin/bash
-# 云端一键脚本：[Smoke Test] → 生成数据 → 训练 YOLOv11 → 导出 ONNX
-# 硬件: RTX 3090 24G / 16核CPU / 32G内存
+# ══════════════════════════════════════════════════════════════
+#  YOLO UI 检测器 — 云端训练脚本 v2
+#  硬件: RTX 3090 24G / 16核CPU / 32G内存
+# ══════════════════════════════════════════════════════════════
 #
-# 用法:
-#   bash auto_train.sh                        # 完整流程（烟雾测试通过后自动继续）
-#   bash auto_train.sh --skip-smoke           # 跳过烟雾测试，直接正式跑
-#   bash auto_train.sh --count 2000 --epochs 150
-#   bash auto_train.sh --batch 64 --device 0
+#  用法示例:
+#    bash auto_train.sh                          # 全量训练（默认5000张/150轮）
+#    bash auto_train.sh --finetune best.pt       # 增量微调（从已有模型继续，30轮）
+#    bash auto_train.sh --count 2000 --epochs 80 # 自定义数量/轮数
+#    bash auto_train.sh --clean-dataset          # 训练前清空旧数据集
+#    bash auto_train.sh --skip-smoke             # 跳过烟雾测试
+#    bash auto_train.sh --finetune best.pt --count 1000 --epochs 50 --clean-dataset
+#
+# ══════════════════════════════════════════════════════════════
 
-set -e
+set -euo pipefail
 
-# ── 参数默认值（RTX 3090 24G 优化配置）─────────────────
-COUNT=5000          # 正式生成图片数量（RTX 3090 24G 高质量生产配置）
-EPOCHS=150          # 训练轮数（5000张数据推荐150轮充分收敛）
-MODEL="yolo11m.pt"  # 中型模型，3090 24G 完全驾驭
-IMGSZ=640           # 图像尺寸
-BATCH=48            # 3090 24G 显存，batch=48 安全上限（可试64）
-WORKERS=8           # 16核CPU，dataloader 用8线程
-DEVICE=0            # GPU 0
+# ─── 默认参数 ─────────────────────────────────────────────────
+COUNT=5000
+EPOCHS=150
+BASE_MODEL="yolo11m.pt"   # 全量训练起点
+FINETUNE_MODEL=""         # 不为空则走增量微调模式
+IMGSZ=640
+BATCH=48
+WORKERS=8
+DEVICE=0
 NAME="yolo_ui"
-SKIP_SMOKE=false    # 是否跳过烟雾测试
+SKIP_SMOKE=false
+CLEAN_DATASET=false
 
-SMOKE_COUNT=5       # 烟雾测试生成图片数
-SMOKE_EPOCHS=2      # 烟雾测试训练轮数
+SMOKE_COUNT=5
+SMOKE_EPOCHS=2
 
-# ── 解析命令行 ─────────────────────────────────────────
+# ─── 解析命令行 ───────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --count)       COUNT="$2";       shift 2 ;;
-        --epochs)      EPOCHS="$2";      shift 2 ;;
-        --model)       MODEL="$2";       shift 2 ;;
-        --imgsz)       IMGSZ="$2";       shift 2 ;;
-        --batch)       BATCH="$2";       shift 2 ;;
-        --workers)     WORKERS="$2";     shift 2 ;;
-        --device)      DEVICE="$2";      shift 2 ;;
-        --name)        NAME="$2";        shift 2 ;;
-        --skip-smoke)  SKIP_SMOKE=true;  shift   ;;
-        *) echo "Unknown arg: $1"; exit 1 ;;
+        --count)         COUNT="$2";           shift 2 ;;
+        --epochs)        EPOCHS="$2";          shift 2 ;;
+        --model)         BASE_MODEL="$2";      shift 2 ;;
+        --finetune)      FINETUNE_MODEL="$2";  shift 2 ;;
+        --imgsz)         IMGSZ="$2";           shift 2 ;;
+        --batch)         BATCH="$2";           shift 2 ;;
+        --workers)       WORKERS="$2";         shift 2 ;;
+        --device)        DEVICE="$2";          shift 2 ;;
+        --name)          NAME="$2";            shift 2 ;;
+        --skip-smoke)    SKIP_SMOKE=true;      shift   ;;
+        --clean-dataset) CLEAN_DATASET=true;   shift   ;;
+        *) echo "未知参数: $1"; exit 1 ;;
     esac
 done
 
+# ─── 模式判断 ─────────────────────────────────────────────────
+if [ -n "$FINETUNE_MODEL" ]; then
+    MODE="finetune"
+    START_MODEL="$FINETUNE_MODEL"
+    # 增量微调推荐参数（如用户没有自定义则覆盖默认值）
+    [ "$COUNT"  -eq 5000 ] && COUNT=1000
+    [ "$EPOCHS" -eq 150  ] && EPOCHS=50
+else
+    MODE="full"
+    START_MODEL="$BASE_MODEL"
+fi
+
+# ─── 工具函数 ─────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# ── 时间工具函数 ───────────────────────────────────────────
-SCRIPT_START=$(date +%s)          # 脚本启动时间（unix 秒）
-STEP_START=$SCRIPT_START          # 当前步骤开始时间
+SCRIPT_START=$(date +%s)
+STEP_START=$SCRIPT_START
 
 elapsed_since() {
-    # 返回从指定时间点到现在经过了多少 H:M:S
-    local t0=$1
-    local diff=$(( $(date +%s) - t0 ))
+    local diff=$(( $(date +%s) - $1 ))
     printf "%dh%02dm%02ds" $((diff/3600)) $(( (diff%3600)/60 )) $((diff%60))
 }
-
 total_elapsed() { elapsed_since "$SCRIPT_START"; }
-
-step_elapsed() { elapsed_since "$STEP_START"; }
-
-step_cost() {
-    # 按 ¥1.06/小时 估算当前步骤费用
-    local t0=$1
-    local secs=$(( $(date +%s) - t0 ))
-    awk "BEGIN { printf '¥%.3f', $secs/3600*1.06 }"
+step_elapsed()  { elapsed_since "$STEP_START";  }
+step_cost()     {
+    local secs=$(( $(date +%s) - $1 ))
+    awk "BEGIN { printf 'CNY %.3f', $secs/3600*1.06 }"
 }
+log()  { echo ""; echo "[$(date '+%H:%M:%S') | 已用 $(total_elapsed)] $*"; }
+sep()  { echo ""; echo "══════════════════════════════════════════════════"; }
+ok()   { echo "  ✔  $*"; }
+info() { echo "  ·  $*"; }
+begin_step() { STEP_START=$(date +%s); echo "  ⏱  步骤开始: $(date '+%Y-%m-%d %H:%M:%S')"; }
 
-log() {
-    echo ""
-    echo "[$(date '+%H:%M:%S') | 已用 $(total_elapsed)] $*"
-}
-sep() { echo ""; echo "══════════════════════════════════════════════════"; }
-
-begin_step() {
-    # 记录步骤开始时间并打印
-    STEP_START=$(date +%s)
-    echo "  ⏱  步骤开始: $(date '+%Y-%m-%d %H:%M:%S')"
-}
-
+# ─── 启动横幅 ─────────────────────────────────────────────────
 sep
-log "🚀 YOLO UI 训练脚本启动"
-echo "  开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
-echo "  配置: COUNT=$COUNT | EPOCHS=$EPOCHS | MODEL=$MODEL | BATCH=$BATCH"
+log "🚀 YOLO UI 训练脚本 v2 启动"
+echo ""
+echo "  模式:      $MODE"
+echo "  起点模型:  $START_MODEL"
+echo "  生成数量:  $COUNT 张"
+echo "  训练轮数:  $EPOCHS epochs"
+echo "  Batch:     $BATCH  |  Workers: $WORKERS  |  Device: $DEVICE"
+echo "  清空数据:  $CLEAN_DATASET"
+echo "  跳烟雾:    $SKIP_SMOKE"
 echo ""
 
-# ──────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
 # STEP 0 — 安装依赖
-# ──────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
 sep; log "STEP 0 / 5 — 安装依赖"
 begin_step
 pip install ultralytics Pillow playwright -q
 playwright install chromium
-log "依赖安装完成（耗时 $(step_elapsed)）"
+ok "依赖安装完成 ($(step_elapsed))"
 
-# ──────────────────────────────────────────────────────
-# STEP 1 — 烟雾测试
-# ──────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# STEP 1 — 烟雾测试（可跳过）
+# ══════════════════════════════════════════════════════════════
 if [ "$SKIP_SMOKE" = false ]; then
-    sep; log "STEP 1 / 5 — Smoke Test（${SMOKE_COUNT} 张图 / ${SMOKE_EPOCHS} epoch）"
-    echo "  目的：验证完整流程无报错，不跑真实训练"
-    echo ""
+    sep; log "STEP 1 / 5 — Smoke Test (${SMOKE_COUNT} 张 / ${SMOKE_EPOCHS} epoch)"
+    echo "  目的: 验证完整流程无报错，避免正式跑到一半才崩"
     begin_step
 
-    # 清空旧烟雾测试数据
     rm -rf dataset_smoke
 
-    # 生成 5 张测试图到独立 smoke 目录，避免覆盖或碰撞正式 dataset
-    python -m generator.main --count "$SMOKE_COUNT" --start 0 --output-dir dataset_smoke
+    python -m generator.main \
+        --count "$SMOKE_COUNT" \
+        --start 0 \
+        --output-dir dataset_smoke
 
-    log "Smoke Test — 开始训练 ${SMOKE_EPOCHS} epoch..."
     yolo detect train \
-        model="$MODEL" \
+        model="$START_MODEL" \
         data=dataset_smoke/data.yaml \
         epochs="$SMOKE_EPOCHS" \
         imgsz="$IMGSZ" \
@@ -117,110 +131,147 @@ if [ "$SKIP_SMOKE" = false ]; then
         workers="$WORKERS" \
         device="$DEVICE" \
         name="${NAME}_smoke" \
-        project=runs \
         exist_ok=True \
         verbose=False
 
-    # 清理烟雾测试产物
-    rm -rf dataset_smoke runs/${NAME}_smoke
+    # YOLO detect 训练结果在 runs/detect/{name}/ 下
+    SMOKE_DIR=$(find runs/detect -maxdepth 1 -type d -name "${NAME}_smoke" 2>/dev/null | head -1)
+    rm -rf dataset_smoke "$SMOKE_DIR"
 
-    log "✅ Smoke Test 通过！耗时 $(step_elapsed)，开始正式生成+训练..."
+    ok "Smoke Test 通过！($(step_elapsed))"
 else
-    log "STEP 1 跳过（--skip-smoke）"
+    log "STEP 1 跳过 (--skip-smoke)"
 fi
 
-# ──────────────────────────────────────────────────────
-# STEP 2 — 正式生成数据
-# ──────────────────────────────────────────────────────
-sep; log "STEP 2 / 5 — 正式生成数据集（${COUNT} 张）"
-echo "  配置: train/val 自动分割 (85%/15%)"
-echo "  分辨率: 桌面 + 移动端混合"
-echo ""
+# ══════════════════════════════════════════════════════════════
+# STEP 2 — 生成数据集
+# ══════════════════════════════════════════════════════════════
+sep; log "STEP 2 / 5 — 生成数据集 (${COUNT} 张)"
 begin_step
+
+# 清空旧数据（可选）
+if [ "$CLEAN_DATASET" = true ]; then
+    info "清空旧数据集 dataset/ ..."
+    rm -rf dataset
+    ok "旧数据已清空"
+fi
 
 python -m generator.main --count "$COUNT"
 
 N_TRAIN=$(find dataset/images/train -name "*.jpg" 2>/dev/null | wc -l)
-N_VAL=$(find dataset/images/val   -name "*.jpg" 2>/dev/null | wc -l)
-log "数据集生成完毕: ${N_TRAIN} train / ${N_VAL} val（耗时 $(step_elapsed)）"
+N_VAL=$(find   dataset/images/val   -name "*.jpg" 2>/dev/null | wc -l)
+ok "数据集生成完毕: ${N_TRAIN} train / ${N_VAL} val ($(step_elapsed))"
 
-# ──────────────────────────────────────────────────────
-# STEP 3 — 正式训练
-# ──────────────────────────────────────────────────────
-sep
-log "STEP 3 / 5 — YOLOv11 训练"
+# ══════════════════════════════════════════════════════════════
+# STEP 3 — 训练
+# ══════════════════════════════════════════════════════════════
+sep; log "STEP 3 / 5 — YOLOv11 训练"
 echo ""
-echo "  模型:    $MODEL"
-echo "  数据:    dataset/data.yaml"
-echo "  Epochs:  $EPOCHS"
-echo "  ImgSz:   $IMGSZ"
-echo "  Batch:   $BATCH  (RTX 3090 24G 优化)"
-echo "  Workers: $WORKERS"
-echo "  Device:  $DEVICE"
+info "起点模型:  $START_MODEL"
+info "数据集:    dataset/data.yaml"
+info "Epochs:    $EPOCHS"
+info "模式:      $MODE"
 echo ""
 begin_step
 
-yolo detect train \
-    model="$MODEL" \
-    data=dataset/data.yaml \
-    epochs="$EPOCHS" \
-    imgsz="$IMGSZ" \
-    batch="$BATCH" \
-    workers="$WORKERS" \
-    device="$DEVICE" \
-    name="$NAME" \
-    project=runs \
-    exist_ok=True \
-    optimizer=AdamW \
-    lr0=0.001 \
-    lrf=0.01 \
-    warmup_epochs=3 \
-    cos_lr=True \
-    label_smoothing=0.1 \
-    hsv_h=0.015 \
-    hsv_s=0.7 \
-    hsv_v=0.4 \
-    degrees=0 \
-    translate=0.1 \
-    scale=0.5 \
-    flipud=0.0 \
-    fliplr=0.5 \
-    mosaic=0.8 \
-    mixup=0.1
+if [ "$MODE" = "finetune" ]; then
+    # ── 增量微调：低学习率，避免遗忘旧知识 ──
+    yolo detect train \
+        model="$START_MODEL" \
+        data=dataset/data.yaml \
+        epochs="$EPOCHS" \
+        imgsz="$IMGSZ" \
+        batch="$BATCH" \
+        workers="$WORKERS" \
+        device="$DEVICE" \
+        name="$NAME" \
+        exist_ok=True \
+        lr0=0.0001 \
+        lrf=0.01 \
+        warmup_epochs=1 \
+        cos_lr=True \
+        label_smoothing=0.05 \
+        optimizer=AdamW
+else
+    # ── 全量训练：标准配置 ──
+    yolo detect train \
+        model="$START_MODEL" \
+        data=dataset/data.yaml \
+        epochs="$EPOCHS" \
+        imgsz="$IMGSZ" \
+        batch="$BATCH" \
+        workers="$WORKERS" \
+        device="$DEVICE" \
+        name="$NAME" \
+        exist_ok=True \
+        optimizer=AdamW \
+        lr0=0.001 \
+        lrf=0.01 \
+        warmup_epochs=3 \
+        cos_lr=True \
+        label_smoothing=0.1 \
+        hsv_h=0.015 \
+        hsv_s=0.7 \
+        hsv_v=0.4 \
+        translate=0.1 \
+        scale=0.5 \
+        fliplr=0.5 \
+        mosaic=0.8 \
+        mixup=0.1
+fi
 
-log "✅ 训练完成（耗时 $(step_elapsed)，约 $(step_cost $STEP_START)）"
+TRAIN_COST=$(step_cost $STEP_START)
+ok "训练完成 ($(step_elapsed)，约 $TRAIN_COST)"
 
-# ──────────────────────────────────────────────────────
+# ─── 自动定位 best.pt（避免 YOLO 路径嵌套问题）───────────────
+BEST_PT=$(find runs -name "best.pt" -path "*/${NAME}/weights/best.pt" | head -1)
+if [ -z "$BEST_PT" ]; then
+    BEST_PT=$(find runs -name "best.pt" | grep -v smoke | sort | tail -1)
+fi
+if [ -z "$BEST_PT" ]; then
+    echo ""
+    echo "  ✘ 找不到 best.pt，训练可能失败，请检查 runs/ 目录"
+    exit 1
+fi
+TRAIN_DIR="$(dirname "$(dirname "$BEST_PT")")"   # runs/.../yolo_ui
+ok "模型路径: $BEST_PT"
+
+# ══════════════════════════════════════════════════════════════
 # STEP 4 — 导出 ONNX
-# ──────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
 sep; log "STEP 4 / 5 — 导出 ONNX"
 begin_step
+
 yolo export \
-    model="runs/detect/${NAME}/weights/best.pt" \
+    model="$BEST_PT" \
     format=onnx \
     imgsz="$IMGSZ" \
     simplify=True
 
-log "ONNX 导出完成（耗时 $(step_elapsed)）"
+BEST_ONNX="${BEST_PT%.pt}.onnx"
+ok "ONNX 导出完成: $BEST_ONNX ($(step_elapsed))"
 
-# ──────────────────────────────────────────────────────
-# STEP 5 — 自动验证（P4：训练完输出 mAP 指标）
-# ──────────────────────────────────────────────────────
-sep; log "STEP 5 / 5 — 验证集评估（输出 mAP）"
+# ══════════════════════════════════════════════════════════════
+# STEP 5 — 验证集评估
+# ══════════════════════════════════════════════════════════════
+sep; log "STEP 5 / 5 — 验证集评估"
 begin_step
+
 yolo val \
-    model="runs/detect/${NAME}/weights/best.pt" \
+    model="$BEST_PT" \
     data=dataset/data.yaml \
     imgsz="$IMGSZ" \
     batch=16 \
     device="$DEVICE" \
     name="${NAME}_val" \
-    project=runs \
-    exist_ok=True || log "⚠️  val 步骤失败（不影响模型）"
+    exist_ok=True \
+    || log "⚠  val 步骤失败（不影响模型）"
 
-log "验证完成（耗时 $(step_elapsed)）"
+ok "验证完成 ($(step_elapsed))"
 
-# ─────────────────── 最终汇总 ────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# 完成汇总
+# ══════════════════════════════════════════════════════════════
 TOTAL_SECS=$(( $(date +%s) - SCRIPT_START ))
 TOTAL_H=$((TOTAL_SECS/3600))
 TOTAL_M=$(( (TOTAL_SECS%3600)/60 ))
@@ -230,15 +281,16 @@ TOTAL_COST=$(awk "BEGIN { printf '%.3f', $TOTAL_SECS/3600*1.06 }")
 sep
 log "🎉 全部完成！"
 echo ""
-echo "  ┌─────────────────────────────────────────┐"
-echo "  │  开始时间:  $(date -d @$SCRIPT_START '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date -r $SCRIPT_START '+%Y-%m-%d %H:%M:%S')  │"
-echo "  │  结束时间:  $(date '+%Y-%m-%d %H:%M:%S')              │"
-printf "  │  总耗时:    %dh %02dm %02ds                     │\n" $TOTAL_H $TOTAL_M $TOTAL_S
-printf "  │  估算费用:  ¥%s (按 ¥1.06/h)          │\n" "$TOTAL_COST"
-echo "  └─────────────────────────────────────────┘"
+echo "  ┌─────────────────────────────────────────────────┐"
+printf "  │  模式:      %-35s│\n" "$MODE"
+printf "  │  总耗时:    %dh %02dm %02ds%27s│\n" $TOTAL_H $TOTAL_M $TOTAL_S ""
+printf "  │  估算费用:  CNY %-32s│\n" "$TOTAL_COST (按 1.06/h)"
+echo  "  ├─────────────────────────────────────────────────┤"
+printf "  │  模型 .pt:  %-35s│\n" "$BEST_PT"
+printf "  │  模型 ONNX: %-35s│\n" "$BEST_ONNX"
+printf "  │  训练日志:  %-35s│\n" "$TRAIN_DIR/results.csv"
+echo  "  └─────────────────────────────────────────────────┘"
 echo ""
-echo "  模型权重:  runs/detect/${NAME}/weights/best.pt"
-echo "  ONNX:      runs/detect/${NAME}/weights/best.onnx"
-echo "  训练曲线:  runs/detect/${NAME}/results.csv"
-echo "  验证结果:  runs/detect/${NAME}_val/"
+echo "  打包下载命令:"
+echo "  tar -czf yolo_ui_$(date +%Y%m%d_%H%M).tar.gz $TRAIN_DIR/"
 echo ""

@@ -7,7 +7,7 @@ P3 新增：
   drawer 注入（8% 概率，与 modal 互斥）
 """
 import random
-from ..config import PAGE_SIZES, PAGE_SIZE_WEIGHTS, DARK, ROOT
+from ..config import PAGE_SIZES, PAGE_SIZE_WEIGHTS, DARK, ROOT, RANKING_TITLES
 from .button import generate_button_html
 from .input import generate_input_html, generate_checkbox_html, generate_radio_html, generate_select_html, generate_textarea_html
 from .modal import (
@@ -158,8 +158,8 @@ def generate_page():
     # 决定页面类型（P3：新增 table、navbar）
     page_type = random.choices(
         ["form", "mixed", "dashboard", "login", "textarea_focus", "icon_grid",
-         "table", "navbar"],
-        weights=[0.22, 0.18, 0.10, 0.12, 0.16, 0.10, 0.07, 0.05]
+         "table", "navbar", "ranking_list", "news_feed", "social_card"],
+        weights=[0.18, 0.15, 0.08, 0.10, 0.13, 0.08, 0.06, 0.04, 0.07, 0.07, 0.04]
     )[0]
 
     body_parts = []
@@ -179,6 +179,12 @@ def generate_page():
         body_parts.append(_table_layout())
     elif page_type == "navbar":
         body_parts.append(_navbar_layout())
+    elif page_type == "ranking_list":
+        body_parts.append(_ranking_list_layout())
+    elif page_type == "news_feed":
+        body_parts.append(_news_feed_layout())
+    elif page_type == "social_card":
+        body_parts.append(_social_card_layout())
     else:
         body_parts.append(_login_layout())
 
@@ -702,3 +708,310 @@ def _navbar_layout():
         f'</div>'
     )
     return container, all_metas
+
+
+# ─── 新增: 排行榜/热榜布局 ──────────────────────────────────────
+def _ranking_list_layout():
+    """生成热榜/排行榜布局（带数字序号方块 + 文字标题链接）
+
+    训练目的:
+    - 让模型学会：数字序号方块 ≠ checkbox（纯背景元素，不标注）
+    - 让模型学会：标题文字行 = link（标注为 link 类别）
+    """
+    dark = random.random() < 0.25
+    bg        = random.choice(["#1e1e2e", "#0f172a"]) if dark else random.choice(["#fff", "#f8f9fa", "#fafafa"])
+    text_c    = "#e2e8f0" if dark else "#212529"
+    border_c  = "#374151" if dark else "#e5e7eb"
+    sub_c     = "#94a3b8" if dark else "#6b7280"
+
+    # 热榜标题
+    board_titles = ["热搜榜", "热榜", "实时热点", "百度热搜", "微博热搜",
+                    "知乎热榜", "今日热点", "推荐阅读", "Hot Topics", "Trending"]
+    board_title = random.choice(board_titles)
+
+    n_items = random.randint(8, 15)
+    titles  = random.choices(RANKING_TITLES, k=n_items)
+
+    # 序号颜色（前3名特殊颜色，其余灰色）
+    rank_colors = [
+        ("#ff2442", "#fff"),   # 1
+        ("#ff6b35", "#fff"),   # 2
+        ("#ffa500", "#fff"),   # 3
+    ]
+    default_rank_color = ("#e5e7eb" if not dark else "#374151", "#6b7280")
+
+    rows_html = []
+    metas     = []
+
+    for i, title in enumerate(titles):
+        rank = i + 1
+        if rank <= 3:
+            rb_bg, rb_c = rank_colors[rank - 1]
+        else:
+            rb_bg, rb_c = default_rank_color
+
+        # 序号方块（纯视觉元素，不可交互，renderer 不会把它标注为任何类别）
+        rank_style = (
+            f"display:inline-flex;align-items:center;justify-content:center;"
+            f"width:{random.choice([18,20,22])}px;height:{random.choice([18,20,22])}px;"
+            f"background:{rb_bg};color:{rb_c};"
+            f"font-size:11px;font-weight:600;"
+            f"border-radius:{random.choice(['2px','3px','4px'])};"
+            f"flex-shrink:0;margin-right:8px;"
+        )
+        rank_html = f'<span style="{rank_style}">{rank}</span>'
+
+        # 标题链接（<a> 标签，会被 renderer 标注为 link）
+        href = random.choice(["#", "javascript:void(0)"])
+        link_style = (
+            f"color:{text_c};font-size:{random.choice(['14px','15px','16px'])};"
+            f"text-decoration:none;cursor:pointer;flex:1;"
+            f"font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;"
+            f"line-height:1.5;"
+        )
+        link_html = f'<a href="{href}" style="{link_style}">{title}</a>'
+        metas.append({"type": "link", "style": "news_row", "text": title})
+
+        # 热度标签（部分条目，纯展示用）
+        tag_html = ""
+        if random.random() < 0.35:
+            tag_colors = [("#fef2f2", "#ef4444"), ("#fff7ed", "#f97316"),
+                          ("#f0fdf4", "#22c55e"), ("#eff6ff", "#3b82f6")]
+            tag_bg, tag_c = random.choice(tag_colors)
+            tag_text = random.choice(["热", "新", "沸", "荐", "爆"])
+            tag_style = (
+                f"display:inline-block;padding:0 4px;font-size:10px;"
+                f"background:{tag_bg};color:{tag_c};border-radius:2px;"
+                f"margin-left:4px;flex-shrink:0;"
+            )
+            tag_html = f'<span style="{tag_style}">{tag_text}</span>'
+
+        # 热度数字
+        heat_html = ""
+        if random.random() < 0.6:
+            heat = random.randint(10, 999)
+            heat_style = f"font-size:12px;color:{sub_c};margin-left:8px;flex-shrink:0;"
+            heat_html = f'<span style="{heat_style}">{heat}万</span>'
+
+        row_style = (
+            f"display:flex;align-items:center;"
+            f"padding:{random.choice(['8px 0','10px 0','6px 0'])};"
+            f"border-bottom:1px solid {border_c};"
+        )
+        rows_html.append(
+            f'<div style="{row_style}">{rank_html}{link_html}{tag_html}{heat_html}</div>'
+        )
+
+    header_style = (
+        f"display:flex;align-items:center;justify-content:space-between;"
+        f"margin-bottom:12px;padding-bottom:8px;"
+        f"border-bottom:2px solid {border_c};"
+    )
+    title_style = f"font-size:16px;font-weight:600;color:{text_c};"
+    card_style = (
+        f"background:{bg};border-radius:8px;"
+        f"padding:{random.choice(['16px','20px','24px'])};"
+        f"max-width:{random.randint(360, 600)}px;"
+        f"box-shadow:0 1px 4px rgba(0,0,0,0.08);"
+    )
+
+    # 可能并排两列
+    if random.random() < 0.4:
+        n2 = random.randint(6, 12)
+        titles2 = random.choices(RANKING_TITLES, k=n2)
+        rows2 = []
+        for i2, t2 in enumerate(titles2):
+            rank2 = i2 + 1
+            if rank2 <= 3:
+                rb_bg2, rb_c2 = rank_colors[rank2 - 1]
+            else:
+                rb_bg2, rb_c2 = default_rank_color
+            rs2 = (
+                f"display:inline-flex;align-items:center;justify-content:center;"
+                f"width:20px;height:20px;background:{rb_bg2};color:{rb_c2};"
+                f"font-size:11px;font-weight:600;border-radius:3px;"
+                f"flex-shrink:0;margin-right:8px;"
+            )
+            ls2 = (
+                f"color:{text_c};font-size:14px;text-decoration:none;"
+                f"cursor:pointer;flex:1;"
+                f"font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;"
+            )
+            rows2.append(
+                f'<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid {border_c};">'
+                f'<span style="{rs2}">{rank2}</span>'
+                f'<a href="#" style="{ls2}">{t2}</a></div>'
+            )
+            metas.append({"type": "link", "style": "news_row", "text": t2})
+
+        col2_style = (
+            f"background:{bg};border-radius:8px;"
+            f"padding:16px;max-width:480px;"
+            f"box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-left:24px;"
+        )
+        col1 = f'<div style="{card_style}"><div style="{header_style}"><span style="{title_style}">{board_title}</span></div>{"".join(rows_html)}</div>'
+        col2 = f'<div style="{col2_style}"><div style="{header_style}"><span style="{title_style}">{random.choice(board_titles)}</span></div>{"".join(rows2)}</div>'
+        return f'<div style="display:flex;flex-wrap:wrap;gap:24px;padding:24px;">{col1}{col2}</div>', metas
+
+    card_html = (
+        f'<div style="{card_style}">'
+        f'  <div style="{header_style}">'
+        f'    <span style="{title_style}">{board_title}</span>'
+        f'  </div>'
+        f'  {"".join(rows_html)}'
+        f'</div>'
+    )
+    return f'<div style="padding:24px;">{card_html}</div>', metas
+
+
+# ─── 新增: 新闻资讯流布局 ─────────────────────────────────────
+def _news_feed_layout():
+    """生成新闻列表布局（纯文字链接行 + 分类/时间辅助信息）"""
+    dark = random.random() < 0.2
+    bg     = random.choice(["#0f172a", "#111827"]) if dark else random.choice(["#fff", "#f8f9fa"])
+    text_c = "#e2e8f0" if dark else "#212529"
+    sub_c  = "#94a3b8" if dark else "#9ca3af"
+    border_c = "#374151" if dark else "#e5e7eb"
+
+    categories = ["国内", "国际", "科技", "财经", "娱乐", "体育",
+                  "Tech", "Finance", "Sports", "Entertainment"]
+
+    n_items = random.randint(6, 14)
+    parts   = []
+    metas   = []
+
+    # 分类标签行（可选）
+    if random.random() < 0.6:
+        cats = random.sample(categories, random.randint(3, 6))
+        cat_html = "".join(
+            f'<span style="display:inline-block;padding:4px 12px;margin:0 4px 8px 0;'
+            f'border-radius:20px;font-size:13px;cursor:pointer;'
+            f'background:{"#1e3a5f" if dark else "#eff6ff"};'
+            f'color:{"#93c5fd" if dark else "#3b82f6"};">{c}</span>'
+            for c in cats
+        )
+        parts.append(f'<div style="margin-bottom:16px;">{cat_html}</div>')
+
+    for _ in range(n_items):
+        title = random.choice(RANKING_TITLES)
+        href  = "#"
+        lh    = random.choice(["1.5", "1.6"])
+        fs    = random.choice(["14px", "15px", "16px"])
+        link_style = (
+            f"display:block;color:{text_c};font-size:{fs};"
+            f"text-decoration:none;cursor:pointer;line-height:{lh};"
+            f"font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;"
+            f"padding:10px 0;"
+        )
+        link_html = f'<a href="{href}" style="{link_style}">{title}</a>'
+        metas.append({"type": "link", "style": "news_row", "text": title})
+
+        # 副信息行（来源 + 时间）
+        source = random.choice(["新华社", "人民日报", "澎湃", "36氪", "BBC", "Reuters"])
+        time_str = random.choice(["1小时前", "2小时前", "刚刚", "30分钟前", "1天前"])
+        sub_style = f"font-size:12px;color:{sub_c};padding-bottom:8px;"
+        sub_html  = f'<div style="{sub_style}">{source} · {time_str}</div>'
+
+        row_style = f"border-bottom:1px solid {border_c};"
+        parts.append(f'<div style="{row_style}">{link_html}{sub_html}</div>')
+
+    container_style = (
+        f"background:{bg};border-radius:8px;"
+        f"padding:{random.choice(['16px','20px','24px'])};"
+        f"max-width:{random.randint(480, 800)}px;"
+    )
+    return f'<div style="padding:24px;"><div style="{container_style}">{"" .join(parts)}</div></div>', metas
+
+
+# ─── 新增: 社交卡片布局（点赞/评论/分享按钮）─────────────────
+def _social_card_layout():
+    """生成社交内容卡片（含图标+文字的轻量操作按钮）
+
+    训练目的: 让模型识别「点赞/评论/分享/关注/阅读全文」类轻量按钮
+    """
+    dark = random.random() < 0.2
+    bg     = random.choice(["#0f172a", "#1e1e2e"]) if dark else random.choice(["#fff", "#f8f9fa"])
+    text_c = "#e2e8f0" if dark else "#1f2937"
+    sub_c  = "#94a3b8" if dark else "#6b7280"
+    border_c = "#374151" if dark else "#e5e7eb"
+
+    action_configs = [
+        # (图标FA, 文字选项列表, 颜色)
+        ("fa-solid fa-thumbs-up",   ["赞 {n}", "点赞 {n}", "Like {n}", "👍 {n}"], sub_c),
+        ("fa-solid fa-comment",     ["评论 {n}", "回复 {n}", "Comment {n}"], sub_c),
+        ("fa-solid fa-share-nodes", ["分享", "转发", "Share"], sub_c),
+        ("fa-solid fa-bookmark",    ["收藏", "书签", "Save"], sub_c),
+        ("fa-solid fa-ellipsis",    ["更多", "...", "More"], sub_c),
+    ]
+
+    def _icon_text_btn(icon_cls, texts, color):
+        """生成图标+文字的轻量按钮"""
+        n    = random.randint(0, 9999)
+        text = random.choice(texts).format(n=n)
+        fs   = random.choice(["12px", "13px", "14px"])
+        pad  = random.choice(["4px 8px", "4px 10px", "6px 10px", "4px 12px"])
+        bg_b = random.choice(["transparent", "transparent", "#f3f4f6", "rgba(0,0,0,0.04)"])
+        style = (
+            f"display:inline-flex;align-items:center;gap:4px;"
+            f"padding:{pad};border-radius:6px;"
+            f"background:{bg_b};border:none;cursor:pointer;"
+            f"color:{color};font-size:{fs};"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+        )
+        icon_style = f"font-size:{fs};color:{color};"
+        return (
+            f'<button style="{style}">'
+            f'<i class="{icon_cls}" style="{icon_style}"></i>{text}</button>'
+        ), {"type": "button", "style": "icon_text"}
+
+    n_cards = random.randint(2, 5)
+    card_parts = []
+
+    for _ in range(n_cards):
+        # 卡片内容（摘要文字）
+        snippets = [
+            "这是一篇关于人工智能的文章，探讨了AI对未来工作的影响。",
+            "2026年，Mac和Win的选择困境依然困扰着不少用户。",
+            "研究表明，每天步行11000步可有效延长寿命。",
+            "How does AI affect the future of programming jobs?",
+            "New research shows walking 10,000 steps daily improves health.",
+            "DeepSeek v4发布，百万token上下文引发热议。",
+        ]
+        content = random.choice(snippets)
+        metas_card = []
+
+        # 操作按钮行
+        n_actions = random.randint(2, 4)
+        selected_actions = random.sample(action_configs, n_actions)
+        btn_parts = []
+        for icon_cls, texts, color in selected_actions:
+            bhtml, bmeta = _icon_text_btn(icon_cls, texts, color)
+            btn_parts.append(bhtml)
+            metas_card.append(bmeta)
+
+        # 「阅读全文」链接（50%概率）
+        read_more_html = ""
+        if random.random() < 0.5:
+            rm_style = (
+                f"color:{random.choice(['#1677ff','#0d6efd','#3b82f6'])};"
+                f"font-size:13px;text-decoration:none;cursor:pointer;"
+            )
+            read_more_html = f' <a href="#" style="{rm_style}">阅读全文</a>'
+            metas_card.append({"type": "link", "style": "action_text"})
+
+        content_style = f"font-size:14px;color:{text_c};line-height:1.6;margin-bottom:8px;"
+        actions_style = f"display:flex;align-items:center;gap:4px;flex-wrap:wrap;"
+        card_style = (
+            f"background:{bg};border-radius:8px;"
+            f"padding:{random.choice(['16px','20px'])};"
+            f"border:1px solid {border_c};"
+            f"margin-bottom:12px;"
+        )
+        card_parts.append(
+            f'<div style="{card_style}">'
+            f'  <div style="{content_style}">{content}{read_more_html}</div>'
+            f'  <div style="{actions_style}">{" ".join(btn_parts)}</div>'
+            f'</div>'
+        )
+
+    return f'<div style="padding:24px;max-width:680px;">{"" .join(card_parts)}</div>', metas_card

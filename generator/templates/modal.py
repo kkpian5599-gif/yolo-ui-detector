@@ -76,17 +76,60 @@ def generate_overlay_html():
 
 
 def generate_link_html():
-    """生成超链接"""
-    color = random.choice(["#0d6efd", "#0969da", "#409eff", "#59636e"])
-    text = random.choice(LINK_TEXTS)
-    fs = random.choice(["12px", "14px", "16px"])
-    style = (
-        f"color:{color};font-size:{fs};text-decoration:{random.choice(['none','underline'])};"
-        f"cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
-    )
+    """生成超链接 — 支持多种样式：导航短链接 / 新闻标题行 / 操作文字链接"""
+    from ..config import LINK_TEXTS
+    style_type = random.choices(
+        ["nav_link", "news_row", "action_text"],
+        weights=[40, 40, 20]
+    )[0]
+
     href = random.choice(["#", "javascript:void(0)", "https://example.com"])
-    html = f'<a href="{href}" style="{style}">{text}</a>'
-    return html, {"type": "link", "text": text}
+
+    if style_type == "nav_link":
+        # 普通导航蓝色链接
+        color = random.choice(["#0d6efd", "#0969da", "#409eff", "#1677ff", "#59636e"])
+        text = random.choice([t for t in LINK_TEXTS if len(t) <= 12])
+        fs = random.choice(["12px", "14px", "16px"])
+        style = (
+            f"color:{color};font-size:{fs};"
+            f"text-decoration:{random.choice(['none','underline'])};"
+            f"cursor:pointer;"
+            f"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+        )
+        html = f'<a href="{href}" style="{style}">{text}</a>'
+
+    elif style_type == "news_row":
+        # 新闻列表标题行（纯文字，深色，无下划线，全宽块）
+        color = random.choice(["#333", "#1a1a1a", "#222", "#212529", "#2c2c2c",
+                               "#0d0d0d", "#111", "#404040", "#555", "#1d1d1f"])
+        text = random.choice([t for t in LINK_TEXTS if len(t) >= 6])
+        fs = random.choice(["14px", "15px", "16px", "17px", "18px"])
+        fw = random.choice(["400", "400", "500"])
+        lh = random.choice(["1.5", "1.6", "1.7"])
+        style = (
+            f"display:block;color:{color};font-size:{fs};font-weight:{fw};"
+            f"text-decoration:none;cursor:pointer;line-height:{lh};"
+            f"font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',"
+            f"'Microsoft YaHei',sans-serif;"
+            f"padding:{random.choice(['4px 0','6px 0','8px 0','2px 0'])};"
+        )
+        html = f'<a href="{href}" style="{style}">{text}</a>'
+
+    else:
+        # 操作文字链接（小字，有颜色）
+        color = random.choice(["#0d6efd", "#1677ff", "#1890ff", "#52c41a",
+                               "#f5222d", "#fa8c16", "#722ed1", "#13c2c2"])
+        text = random.choice(["编辑", "删除", "查看", "修改", "详情", "阅读全文",
+                               "展开", "收起", "回复", "Edit", "Delete", "View"])
+        fs = random.choice(["12px", "13px", "14px"])
+        style = (
+            f"color:{color};font-size:{fs};text-decoration:none;"
+            f"cursor:pointer;"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+        )
+        html = f'<a href="{href}" style="{style}">{text}</a>'
+
+    return html, {"type": "link", "style": style_type, "text": text}
 
 
 def generate_icon_html():
