@@ -41,8 +41,22 @@ BTN_TEXTS = [
 ]
 
 INPUT_PLACEHOLDERS = [
+    # 中文通用
     "请输入", "请输入用户名", "请输入密码", "请输入邮箱", "搜索...",
+    "请输入手机号", "请输入验证码", "请输入昵称", "请输入真实姓名", "请输入地址",
+    "请输入身份证号", "请输入公司名称", "请输入备注", "请输入关键字", "请输入网址",
+    "请输入金额", "请输入数量", "请输入描述", "请输入标题", "请输入内容",
+    "在此搜索...", "输入搜索词...", "输入城市/地区", "输入优惠码", "输入邮政编码",
+    # 英文通用
     "Please enter", "Username", "Password", "Email", "Search...",
+    "Enter your name", "Enter email address", "Enter phone number", "Enter verification code",
+    "Enter your address", "Enter city", "Enter zip code", "Enter coupon code",
+    "Enter amount", "Enter quantity", "Enter description", "Enter title",
+    "Search for anything", "Find products...", "Search by keyword",
+    "Type to search", "Filter results...", "Enter URL", "Enter company name",
+    "Full name", "First name", "Last name", "Job title", "Department",
+    "Card number", "MM/YY", "CVV", "Account number", "Confirm password",
+    "New password", "Old password", "Re-enter password",
 ]
 
 LINK_TEXTS = [
@@ -54,10 +68,32 @@ LINK_TEXTS = [
 # 快捷引用
 DARK = STYLE_PROFILE["dark_theme"]
 
-# 页面尺寸
+# 训练/验证集分割比例
+VAL_RATIO = 0.15  # 15% 作为 val 集
+
+# 页面尺寸（含移动端，解决尺度泛化问题）
 PAGE_SIZES = [
+    # 桌面端（权重约 70%）
     (1366, 768),   # 常见笔记本
     (1440, 900),   # MacBook
     (1920, 1080),  # 标准桌面
     (1280, 720),   # 小屏幕
+    (1536, 864),   # 常见 Windows 笔记本
+    (1280, 800),   # 较小桌面
+    # 移动端（权重约 30%）
+    (390, 844),    # iPhone 14
+    (375, 667),    # iPhone SE
+    (414, 896),    # iPhone XR
+    (360, 780),    # Android 通用
+    (412, 915),    # Pixel 6
+    # 平板端
+    (768, 1024),   # iPad
+    (820, 1180),   # iPad Air
+]
+
+# 尺寸权重：桌面:移动:平板 约 6:3:1
+PAGE_SIZE_WEIGHTS = [
+    10, 10, 8, 8, 8, 6,   # 桌面
+    8, 6, 6, 6, 6,         # 移动
+    4, 4,                  # 平板
 ]

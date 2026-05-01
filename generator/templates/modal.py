@@ -42,7 +42,7 @@ def generate_modal_html():
     btn_cancel_style = f"{btn_style}background:#fff;color:#606266;border:1px solid #dcdfe6;"
 
     html = f"""
-<div style="{overlay_style}" class="modal-overlay">
+<div style="{overlay_style}" class="modal-overlay" data-yolo-class="modal">
   <div style="{modal_style}" class="modal-card">
     <div style="{title_style}">{title_text}</div>
     <div style="{body_style}">{body_text}</div>
@@ -66,7 +66,7 @@ def generate_overlay_html():
         # 给个虚边框让YOLO更容易识别
         f"border:2px dashed rgba(128,128,128,0.3);"
     )
-    html = f'<div style="{style}" class="overlay-area"></div>'
+    html = f'<div style="{style}" class="overlay-area" data-yolo-class="modal"></div>'
     return html, {"type": "overlay", "opacity": opacity}
 
 
