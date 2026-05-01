@@ -152,7 +152,7 @@ yolo detect train \
 # ──────────────────────────────────────────────────────
 sep; log "STEP 4 / 4 — 导出 ONNX"
 yolo export \
-    model="runs/${NAME}/weights/best.pt" \
+    model="runs/detect/${NAME}/weights/best.pt" \
     format=onnx \
     imgsz="$IMGSZ" \
     simplify=True
@@ -160,7 +160,7 @@ yolo export \
 sep
 log "🎉 全部完成！"
 echo ""
-echo "  模型权重:  runs/${NAME}/weights/best.pt"
-echo "  ONNX:      runs/${NAME}/weights/best.onnx"
-echo "  训练曲线:  runs/${NAME}/results.csv"
+echo "  模型权重:  runs/detect/${NAME}/weights/best.pt"
+echo "  ONNX:      runs/detect/${NAME}/weights/best.onnx"
+echo "  训练曲线:  runs/detect/${NAME}/results.csv"
 echo ""

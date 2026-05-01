@@ -22,7 +22,7 @@ from playwright.sync_api import sync_playwright, Browser, Page
 # ──────────────────────────────────────────────
 _EXTRACT_BBOXES_JS = """() => {
     const interactive = document.querySelectorAll(
-        'button:not(.modal-btn-cancel):not(.modal-btn-ok), ' +
+        'button, ' +
         'input:not([type="hidden"]), ' +
         'select, ' +
         'textarea, ' +

@@ -19,7 +19,7 @@ def parse_args():
     p = argparse.ArgumentParser(description="Generate dataset + train YOLO")
     p.add_argument("--count",     type=int,   default=500,          help="生成图片数量")
     p.add_argument("--epochs",    type=int,   default=100,          help="训练 epoch 数")
-    p.add_argument("--model",     type=str,   default="yolov8n.pt", help="基础模型权重")
+    p.add_argument("--model",     type=str,   default="yolo11m.pt", help="基础模型权重")
     p.add_argument("--imgsz",     type=int,   default=640,          help="训练图像尺寸")
     p.add_argument("--batch",     type=int,   default=16,           help="batch size")
     p.add_argument("--workers",   type=int,   default=4,            help="DataLoader 工作线程数")
