@@ -1,9 +1,20 @@
-"""页面布局组装器 — 把各种元素拼成完整HTML页面"""
+"""页面布局组装器 — 把各种元素拼成完整HTML页面
+
+P3 新增：
+  _table_layout()  — 带 checkbox 的数据表格页面
+  _navbar_layout() — 横向导航栏 + 内容区
+  toast 注入（5% 概率，与 modal 互斥）
+  drawer 注入（8% 概率，与 modal 互斥）
+"""
 import random
 from ..config import PAGE_SIZES, PAGE_SIZE_WEIGHTS, DARK, ROOT
 from .button import generate_button_html
 from .input import generate_input_html, generate_checkbox_html, generate_radio_html, generate_select_html, generate_textarea_html
-from .modal import generate_modal_html, generate_overlay_html, generate_link_html, generate_icon_html
+from .modal import (
+    generate_modal_html, generate_overlay_html,
+    generate_link_html, generate_icon_html,
+    generate_toast_html, generate_drawer_html,   # P3
+)
 
 # 本地图标库路径（file:// 供 Playwright 离线渲染）
 _STATIC = ROOT / "generator" / "static"
@@ -144,10 +155,11 @@ def generate_page():
         f"min-height:100vh;{extra_body_style}"
     )
 
-    # 决定页面类型
+    # 决定页面类型（P3：新增 table、navbar）
     page_type = random.choices(
-        ["form", "mixed", "dashboard", "login", "textarea_focus", "icon_grid"],
-        weights=[0.25, 0.20, 0.12, 0.13, 0.18, 0.12]
+        ["form", "mixed", "dashboard", "login", "textarea_focus", "icon_grid",
+         "table", "navbar"],
+        weights=[0.22, 0.18, 0.10, 0.12, 0.16, 0.10, 0.07, 0.05]
     )[0]
 
     body_parts = []
@@ -163,6 +175,10 @@ def generate_page():
         body_parts.append(_textarea_focus_layout())
     elif page_type == "icon_grid":
         body_parts.append(_icon_grid_layout())
+    elif page_type == "table":
+        body_parts.append(_table_layout())
+    elif page_type == "navbar":
+        body_parts.append(_navbar_layout())
     else:
         body_parts.append(_login_layout())
 
@@ -176,19 +192,34 @@ def generate_page():
         else:
             all_html += part
 
-    # 随机加弹窗（25%概率，提升 modal 类别覆盖）
+    # 随机加弹窗（22%概率，提升 modal 类别覆盖）
+    overlay_used = False
     modal_html = ""
-    if random.random() < 0.25:
+    if random.random() < 0.22:
         modal_html, modal_meta = generate_modal_html()
         all_html += modal_html
         element_meta.append(modal_meta)
+        overlay_used = True
 
-    # 随机加半透明遮罩（8%概率，但不和弹窗同时出现）
-    if not modal_html and random.random() < 0.08:
-        overlay_html, overlay_meta = generate_overlay_html()
-        # 遮罩放在内容上方
-        all_html = f'<div style="position:relative;">{all_html}{overlay_html}</div>'
-        element_meta.append(overlay_meta)
+    # 随机加 Drawer 抽屉（8%概率，与弹窗互斥）
+    if not overlay_used and random.random() < 0.08:
+        drawer_html, drawer_meta = generate_drawer_html()
+        all_html += drawer_html
+        element_meta.append(drawer_meta)
+        overlay_used = True
+
+    # 随机加半透明遮罩（6%概率，与弹窗/抽屉互斥）
+    if not overlay_used and random.random() < 0.06:
+        ov_html, ov_meta = generate_overlay_html()
+        all_html = f'<div style="position:relative;">{all_html}{ov_html}</div>'
+        element_meta.append(ov_meta)
+        overlay_used = True
+
+    # 随机加 Toast 通知（5%概率，可与弹窗并存——真实场景也会同时出现）
+    if random.random() < 0.05:
+        toast_html, toast_meta = generate_toast_html()
+        all_html += toast_html
+        element_meta.append(toast_meta)
 
     # 随机选图标库（70% FA，30% Bootstrap Icons）
     icon_lib = random.choices(["fa", "bi"], weights=[70, 30])[0]
@@ -459,3 +490,215 @@ def _textarea_focus_layout():
         container = f'<div style="padding:24px;">{"" .join(parts)}</div>'
 
     return container, metas
+
+
+# ─── P3: 数据表格布局 ────────────────────────────────────
+def _table_layout():
+    """带 checkbox 的数据表格页面（模拟后台管理系统列表）"""
+    dark = random.random() < 0.3
+    bg        = random.choice(["#1e1e2e", "#0f172a", "#111827"]) if dark else "#ffffff"
+    text_c    = "#e2e8f0" if dark else "#212529"
+    border_c  = "#374151" if dark else "#dee2e6"
+    header_bg = random.choice(["#1e293b", "#0f172a"]) if dark else random.choice(["#f8f9fa", "#f0f2f5"])
+    row_hover = "rgba(255,255,255,0.05)" if dark else "#f8f9fa"
+    stripe_bg = "rgba(255,255,255,0.03)" if dark else "#fafafa"
+
+    # 列定义
+    col_configs = [
+        ["姓名", "邮箱", "角色", "状态", "操作"],
+        ["商品名", "价格", "库存", "分类", "操作"],
+        ["Name", "Email", "Department", "Status", "Actions"],
+        ["订单号", "客户", "金额", "时间", "状态"],
+        ["ID", "Title", "Author", "Date", "Actions"],
+    ]
+    cols = random.choice(col_configs)
+
+    # 工具栏（搜索 + 按钮）
+    toolbar_parts = []
+    toolbar_metas = []
+    h_search, m_search = generate_input_html()
+    toolbar_parts.append(f'<div style="display:inline-block;margin-right:8px;">{h_search}</div>')
+    toolbar_metas.append(m_search)
+    for _ in range(random.randint(1, 3)):
+        h_btn, m_btn = generate_button_html()
+        toolbar_parts.append(f'<div style="display:inline-block;margin-right:6px;">{h_btn}</div>')
+        toolbar_metas.append(m_btn)
+    toolbar_html = (
+        f'<div style="margin-bottom:16px;display:flex;align-items:center;gap:8px;">'
+        f'{"".join(toolbar_parts)}</div>'
+    )
+
+    # 表头
+    th_style = (
+        f"padding:10px 14px;text-align:left;font-size:13px;font-weight:600;"
+        f"background:{header_bg};color:{text_c};border-bottom:2px solid {border_c};"
+    )
+    th_checkbox = f'<th style="{th_style}width:36px;"><input type="checkbox" style="width:14px;height:14px;cursor:pointer;"></th>'
+    ths = th_checkbox + "".join(f'<th style="{th_style}">{c}</th>' for c in cols)
+    thead = f'<thead><tr>{ths}</tr></thead>'
+
+    # 数据行
+    n_rows = random.randint(4, 10)
+    tbody_rows = []
+    all_metas = list(toolbar_metas)
+
+    for row_i in range(n_rows):
+        is_stripe = (row_i % 2 == 1)
+        row_bg = stripe_bg if is_stripe else "transparent"
+        td_style = (
+            f"padding:9px 14px;font-size:13px;color:{text_c};"
+            f"border-bottom:1px solid {border_c};background:{row_bg};"
+        )
+        td_cb = f'<td style="{td_style}width:36px;"><input type="checkbox" style="width:14px;height:14px;cursor:pointer;"></td>'
+
+        # 数据单元格（除最后一列 Actions）
+        data_cells = td_cb
+        for col_idx, col in enumerate(cols[:-1]):
+            sample_data = {
+                "姓名": ["张三", "李四", "王五", "赵六"],
+                "邮箱": ["user@example.com", "test@mail.com", "admin@site.org"],
+                "角色": ["管理员", "普通用户", "编辑"],
+                "状态": ["启用", "禁用", "待审核"],
+                "商品名": ["iPhone 15", "MacBook Pro", "AirPods"],
+                "价格": ["¥5999", "¥12999", "¥1299"],
+                "库存": ["128", "32", "256"],
+                "分类": ["手机", "电脑", "配件"],
+                "Name": ["Alice", "Bob", "Carol", "Dave"],
+                "Email": ["alice@corp.com", "bob@corp.com"],
+                "Department": ["Engineering", "Marketing", "HR"],
+                "Status": ["Active", "Inactive", "Pending"],
+                "订单号": [f"ORD-{1000+row_i}", f"ORD-{2000+row_i}"],
+                "客户": ["Alice", "Bob", "客户C"],
+                "金额": ["¥299", "¥1,299", "¥59"],
+                "时间": ["2024-01-15", "2024-02-20"],
+                "ID": [str(row_i + 1)],
+                "Title": ["Article A", "Post B", "Page C"],
+                "Author": ["Admin", "Editor"],
+                "Date": ["2024-01-10", "2024-03-05"],
+            }.get(col, [f"data-{row_i}"])
+            cell_val = random.choice(sample_data)
+            data_cells += f'<td style="{td_style}">{cell_val}</td>'
+
+        # 操作列（小按钮）
+        action_btns = ""
+        for act_label in random.choice([["编辑", "删除"], ["Edit", "Delete"], ["查看", "编辑"], ["View", "Edit", "Del"]]):
+            act_color = "#dc3545" if act_label in ("删除", "Delete", "Del") else "#0d6efd"
+            act_style = (
+                f"padding:3px 10px;font-size:12px;border-radius:4px;cursor:pointer;"
+                f"background:{act_color};color:#fff;border:none;margin-right:4px;"
+            )
+            action_btns += f'<button style="{act_style}">{act_label}</button>'
+        data_cells += f'<td style="{td_style}">{action_btns}</td>'
+        tbody_rows.append(f'<tr style="transition:background 0.15s;" onmouseover="this.style.background=\'{row_hover}\'" onmouseout="this.style.background=\'{row_bg}\'">{data_cells}</tr>')
+
+    tbody = f'<tbody>{"".join(tbody_rows)}</tbody>'
+    table_style = (
+        f"width:100%;border-collapse:collapse;background:{bg};"
+        f"border-radius:8px;overflow:hidden;"
+        f"box-shadow:0 1px 4px rgba(0,0,0,0.08);"
+    )
+    table_html = f'<table style="{table_style}">{thead}{tbody}</table>'
+
+    # 分页条
+    pg_style = f"margin-top:16px;text-align:right;font-size:13px;color:{text_c};"
+    pg_btn = f"padding:4px 10px;margin:0 2px;border:1px solid {border_c};border-radius:4px;background:transparent;color:{text_c};cursor:pointer;"
+    pagination = (
+        f'<div style="{pg_style}">'
+        f'  <button style="{pg_btn}">‹</button>'
+        + "".join(
+            f'<button style="{pg_btn};{"background:#0d6efd;color:#fff;border-color:#0d6efd;" if i==1 else ""}">{i}</button>'
+            for i in range(1, random.randint(3, 6))
+        )
+        + f'  <button style="{pg_btn}">›</button>'
+        f'</div>'
+    )
+
+    container = (
+        f'<div style="padding:24px;background:{bg};min-height:100vh;">'
+        f'  {toolbar_html}'
+        f'  {table_html}'
+        f'  {pagination}'
+        f'</div>'
+    )
+    return container, all_metas
+
+
+# ─── P3: 导航栏布局 ─────────────────────────────────────
+def _navbar_layout():
+    """横向导航栏 + 内容区（模拟网站顶部导航）"""
+    dark = random.random() < 0.35
+    nav_bg    = random.choice(["#1a1a2e", "#0f172a", "#111827", "#1e293b"]) if dark else random.choice(["#ffffff", "#f8f9fa", "#1a1a2e"])
+    nav_text  = "#e5e7eb" if (dark or nav_bg == "#1a1a2e") else "#374151"
+    content_bg = "transparent"
+
+    border_b  = "1px solid rgba(255,255,255,0.08)" if dark else "1px solid #e5e7eb"
+
+    logo_text = random.choice(["MyApp", "Dashboard", "AdminPanel", "Brand", "SaaS"])
+
+    # 导航链接
+    nav_items = random.choice([
+        ["首页", "产品", "文档", "关于"],
+        ["Home", "Products", "Docs", "Pricing", "About"],
+        ["概览", "用户", "订单", "设置"],
+        ["Overview", "Analytics", "Reports", "Settings"],
+    ])
+
+    nav_link_style = (
+        f"display:inline-block;padding:8px 14px;font-size:14px;"
+        f"color:{nav_text};text-decoration:none;border-radius:4px;cursor:pointer;"
+    )
+    links_html = "".join(f'<a href="#" style="{nav_link_style}">{item}</a>' for item in nav_items)
+
+    # 搜索框（50% 概率）
+    search_html = ""
+    search_meta = []
+    if random.random() < 0.5:
+        h, m = generate_input_html()
+        search_html = f'<div style="margin:0 12px;">{h}</div>'
+        search_meta.append(m)
+
+    # 右侧按钮（登录/注册/头像）
+    right_btns_html = ""
+    right_metas = []
+    for _ in range(random.randint(1, 2)):
+        h, m = generate_button_html()
+        right_btns_html += f'<div style="margin-left:8px;">{h}</div>'
+        right_metas.append(m)
+
+    nav_style = (
+        f"display:flex;align-items:center;padding:0 24px;"
+        f"height:56px;background:{nav_bg};"
+        f"border-bottom:{border_b};"
+        f"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"
+    )
+    logo_style = (
+        f"font-size:18px;font-weight:700;color:{nav_text};"
+        f"margin-right:24px;text-decoration:none;"
+    )
+    navbar_html = (
+        f'<nav style="{nav_style}">'
+        f'  <a href="#" style="{logo_style}">{logo_text}</a>'
+        f'  <div style="flex:1;display:flex;align-items:center;">{links_html}</div>'
+        f'  {search_html}'
+        f'  <div style="display:flex;align-items:center;">{right_btns_html}</div>'
+        f'</nav>'
+    )
+
+    # 内容区（随机选一个已有布局的内容）
+    inner_type = random.choice(["form", "mixed", "dashboard_content"])
+    if inner_type == "form":
+        inner_html, inner_metas = _form_layout()
+    elif inner_type == "mixed":
+        inner_html, inner_metas = _mixed_layout()
+    else:
+        n = random.randint(3, 6)
+        inner_html, inner_metas = _random_elements(n, {"button": 25, "input": 20, "select": 15, "link": 15, "icon": 10, "checkbox": 8, "radio": 7})
+
+    all_metas = search_meta + right_metas + list(inner_metas)
+    container = (
+        f'<div style="min-height:100vh;background:{content_bg};">'
+        f'  {navbar_html}'
+        f'  <div style="padding:24px;">{inner_html}</div>'
+        f'</div>'
+    )
+    return container, all_metas

@@ -44,11 +44,11 @@
 
 | # | 问题 | 文件 | 状态 |
 |---|------|------|------|
-| 8  | 新增 Toast 通知模板（右上角/顶部浮出，success/error/warning/info）| `templates/modal.py` | ⬜ |
-| 9  | 新增 Drawer 抽屉模板（右侧滑入侧边栏弹出）| `templates/modal.py` | ⬜ |
-| 10 | 新增 Table 页面布局（带 checkbox 的多行数据表格）| `templates/page.py` | ⬜ |
-| 11 | 新增 Navbar 导航栏组件（横向 logo+links+按钮）| `templates/page.py` | ⬜ |
-| 12 | `page.py` 随机加 toast（5%概率，和 modal 不同时）| `templates/page.py` | ⬜ |
+| 8  | 新增 Toast 通知模板（右上角/顶部浮出，success/error/warning/info）| `templates/modal.py` | ✅ |
+| 9  | 新增 Drawer 抽屉模板（右侧滑入侧边栏弹出）| `templates/modal.py` | ✅ |
+| 10 | 新增 Table 页面布局（带 checkbox 的多行数据表格）| `templates/page.py` | ✅ |
+| 11 | 新增 Navbar 导航栏组件（横向 logo+links+按钮）| `templates/page.py` | ✅ |
+| 12 | `page.py` 随机加 toast（5%概率，和 modal 不同时）| `templates/page.py` | ✅ |
 
 **提交策略**：Phase 3 一次提交 `feat: add toast/drawer/table/navbar templates`
 
