@@ -118,11 +118,17 @@ class BrowserSession:
 
     def start(self):
         self._pw = sync_playwright().start()
-        # 优先使用 Edge（Windows），失败则 fallback 到内置 Chromium
-        try:
-            self._browser = self._pw.chromium.launch(channel="msedge")
-        except Exception:
-            self._browser = self._pw.chromium.launch()
+        # 优先 Chrome → Edge → 内置 Chromium（自动适配各种云环境）
+        for channel in ("chrome", "msedge", None):
+            try:
+                kwargs = {"channel": channel} if channel else {}
+                self._browser = self._pw.chromium.launch(**kwargs)
+                print(f"  [Browser] using: {channel or 'built-in chromium'}")
+                break
+            except Exception:
+                continue
+        else:
+            raise RuntimeError("No usable browser found (chrome / msedge / chromium)")
 
     def stop(self):
         if self._browser:
