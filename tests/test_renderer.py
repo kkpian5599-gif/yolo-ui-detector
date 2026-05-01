@@ -33,7 +33,8 @@ class TestMapToClass:
         assert map_to_class("a", "", "", "了解更多") == 6
 
     def test_icon_maps_to_7(self):
-        assert map_to_class("span", "", "", "🔍") == 7
+        # P1修复：icon 现在用 <i> 标签（Font Awesome）不是 span+emoji
+        assert map_to_class("i", "", "fa-solid fa-search", "") == 7
 
     def test_modal_overlay_maps_to_8(self):
         assert map_to_class("div", "", "modal-overlay", "") == 8

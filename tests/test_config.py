@@ -36,8 +36,10 @@ class TestConfig:
     def test_page_sizes(self):
         from generator.config import PAGE_SIZES
 
-        assert len(PAGE_SIZES) == 4
+        # 含桌面/移动/平板，数量 >= 4 即可（会持续扩充）
+        assert len(PAGE_SIZES) >= 4
         assert (1920, 1080) in PAGE_SIZES
+        assert (390, 844) in PAGE_SIZES   # 移动端 iPhone
 
     def test_dark_theme_loaded(self):
         from generator.config import DARK

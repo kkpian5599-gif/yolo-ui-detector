@@ -157,10 +157,25 @@ yolo export \
     imgsz="$IMGSZ" \
     simplify=True
 
+# ──────────────────────────────────────────────────────
+# STEP 5 — 自动验证（P4：训练完输出 mAP 指标）
+# ──────────────────────────────────────────────────────
+sep; log "STEP 5 / 5 — 验证集评估（输出 mAP）"
+yolo val \
+    model="runs/detect/${NAME}/weights/best.pt" \
+    data=dataset/data.yaml \
+    imgsz="$IMGSZ" \
+    batch=16 \
+    device="$DEVICE" \
+    name="${NAME}_val" \
+    project=runs \
+    exist_ok=True || log "⚠️  val 步骤失败（不影响模型）"
+
 sep
 log "🎉 全部完成！"
 echo ""
 echo "  模型权重:  runs/detect/${NAME}/weights/best.pt"
 echo "  ONNX:      runs/detect/${NAME}/weights/best.onnx"
 echo "  训练曲线:  runs/detect/${NAME}/results.csv"
+echo "  验证结果:  runs/detect/${NAME}_val/"
 echo ""

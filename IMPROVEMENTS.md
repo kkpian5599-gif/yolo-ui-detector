@@ -58,9 +58,9 @@
 
 | # | 问题 | 文件 | 状态 |
 |---|------|------|------|
-| 13 | 补充单元测试：验证 label 格式、YOLO 坐标范围、YAML 合法性 | `tests/` | ⬜ |
-| 14 | 补充内联 SVG icon 生成，让 icon 类别更接近真实网站 | `templates/modal.py` | ⬜ |
-| 15 | 训练完后自动运行 `test_model.py val` 输出 mAP | `auto_train.sh` | ⬜ |
+| 13 | 补充单元测试：验证 label 格式、YOLO 坐标范围、YAML 合法性 | `tests/` | ✅ |
+| 14 | 补充内联 SVG icon 生成，让 icon 类别更接近真实网站 | `templates/modal.py` | ✅ |
+| 15 | 训练完后自动运行 `test_model.py val` 输出 mAP | `auto_train.sh` | ✅ |
 
 **提交策略**：Phase 4 逐条提交
 
