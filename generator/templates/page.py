@@ -146,8 +146,8 @@ def generate_page():
 
     # 决定页面类型
     page_type = random.choices(
-        ["form", "mixed", "dashboard", "login", "textarea_focus"],
-        weights=[0.28, 0.22, 0.15, 0.15, 0.20]
+        ["form", "mixed", "dashboard", "login", "textarea_focus", "icon_grid"],
+        weights=[0.25, 0.20, 0.12, 0.13, 0.18, 0.12]
     )[0]
 
     body_parts = []
@@ -161,6 +161,8 @@ def generate_page():
         body_parts.append(_dashboard_layout())
     elif page_type == "textarea_focus":
         body_parts.append(_textarea_focus_layout())
+    elif page_type == "icon_grid":
+        body_parts.append(_icon_grid_layout())
     else:
         body_parts.append(_login_layout())
 
@@ -174,9 +176,9 @@ def generate_page():
         else:
             all_html += part
 
-    # 随机加弹窗（15%概率）
+    # 随机加弹窗（25%概率，提升 modal 类别覆盖）
     modal_html = ""
-    if random.random() < 0.15:
+    if random.random() < 0.25:
         modal_html, modal_meta = generate_modal_html()
         all_html += modal_html
         element_meta.append(modal_meta)
@@ -279,6 +281,28 @@ def _mixed_layout():
         parts.append(f'<span style="display:inline-block;margin:6px 10px;">{h}</span>')
         metas.append(m)
     container = f'<div style="padding:24px;">{"".join(parts)}</div>'
+    return container, metas
+
+
+def _icon_grid_layout():
+    """图标网格布局：生成大量独立图标样本。"""
+    count = random.randint(12, 28)
+    parts = []
+    metas = []
+    for _ in range(count):
+        h, m = generate_icon_html()
+        tile_bg = random.choice(["#ffffff", "#f8f9fa", "#f1f5f9", "rgba(255,255,255,0.72)"])
+        border = random.choice(["#dee2e6", "#e5e7eb", "#d0d7de", "rgba(0,0,0,0.08)"])
+        tile_size = random.choice([44, 48, 52, 56, 64])
+        parts.append(
+            f'<div style="display:inline-flex;align-items:center;justify-content:center;'
+            f'width:{tile_size}px;height:{tile_size}px;margin:8px;'
+            f'border:1px solid {border};border-radius:8px;background:{tile_bg};'
+            f'box-sizing:border-box;vertical-align:top;">{h}</div>'
+        )
+        metas.append(m)
+
+    container = f'<div style="max-width:760px;margin:0 auto;padding:24px;">{"".join(parts)}</div>'
     return container, metas
 
 

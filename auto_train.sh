@@ -65,13 +65,8 @@ if [ "$SKIP_SMOKE" = false ]; then
     # 清空旧烟雾测试数据
     rm -rf dataset_smoke
 
-    # 生成 5 张测试图
-    python -m generator.main --count "$SMOKE_COUNT" --start 0
-    # 临时把 dataset 复制成 smoke 目录用来测试
-    cp -r dataset dataset_smoke
-
-    # 改 data.yaml 路径指向 smoke 目录
-    sed "s|path:.*|path: ${SCRIPT_DIR}/dataset_smoke|g" dataset/data.yaml > dataset_smoke/data.yaml
+    # 生成 5 张测试图到独立 smoke 目录，避免覆盖或碰撞正式 dataset
+    python -m generator.main --count "$SMOKE_COUNT" --start 0 --output-dir dataset_smoke
 
     log "Smoke Test — 开始训练 ${SMOKE_EPOCHS} epoch..."
     yolo detect train \

@@ -85,9 +85,46 @@ def generate_link_html():
 
 
 def generate_icon_html():
-    """生成图标（用简单的emoji或SVG占位）"""
-    emoji = random.choice(["🔍", "⚙", "🏠", "📁", "⭐", "❤", "✏", "🗑", "📧", "🔔", "👤", "📋", "⏰", "💾"])
-    size = random.choice([16, 20, 24, 32])
-    style = f"display:inline-block;font-size:{size}px;line-height:1;"
-    html = f'<span style="{style}">{emoji}</span>'
-    return html, {"type": "icon", "emoji": emoji, "size": size}
+    """生成独立图标（Font Awesome <i> 标签，可被 renderer 正确捕获）"""
+    # 图标名称 -> FA class
+    icons = [
+        "fa-solid fa-magnifying-glass",
+        "fa-solid fa-gear",
+        "fa-solid fa-house",
+        "fa-solid fa-folder",
+        "fa-solid fa-star",
+        "fa-solid fa-heart",
+        "fa-solid fa-pencil",
+        "fa-solid fa-trash",
+        "fa-solid fa-envelope",
+        "fa-solid fa-bell",
+        "fa-solid fa-user",
+        "fa-solid fa-clipboard",
+        "fa-solid fa-clock",
+        "fa-solid fa-floppy-disk",
+        "fa-solid fa-circle-plus",
+        "fa-solid fa-circle-xmark",
+        "fa-solid fa-upload",
+        "fa-solid fa-download",
+        "fa-solid fa-share-nodes",
+        "fa-solid fa-filter",
+        "fa-solid fa-bars",
+        "fa-solid fa-ellipsis",
+        "fa-solid fa-lock",
+        "fa-solid fa-key",
+        "fa-solid fa-globe",
+        "fa-solid fa-chart-bar",
+        "fa-solid fa-table-columns",
+        "fa-solid fa-image",
+        "fa-solid fa-file-text",
+        "fa-solid fa-link",
+    ]
+    icon_cls = random.choice(icons)
+    size = random.choice(["16px", "18px", "20px", "24px", "28px", "32px"])
+    color = random.choice([
+        "#6c757d", "#0d6efd", "#198754", "#dc3545", "#ffc107",
+        "#0dcaf0", "#6f42c1", "#fd7e14", "#20c997", "#212529",
+    ])
+    style = f"display:inline-block;font-size:{size};color:{color};line-height:1;"
+    html = f'<i class="{icon_cls}" style="{style}"></i>'
+    return html, {"type": "icon", "cls": icon_cls, "size": size}

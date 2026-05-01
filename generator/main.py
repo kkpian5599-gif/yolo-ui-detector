@@ -16,6 +16,7 @@ from .labeler import generate_labels, generate_data_yaml, assign_split
 def main():
     count = 200
     start_override = None  # None = 自动检测
+    output_override = None
 
     args = sys.argv[1:]
     positional = []
@@ -33,6 +34,9 @@ def main():
             except ValueError:
                 pass
             i += 2
+        elif args[i] == "--output-dir" and i + 1 < len(args):
+            output_override = Path(args[i + 1])
+            i += 2
         else:
             positional.append(args[i])
             i += 1
@@ -43,7 +47,7 @@ def main():
         except ValueError:
             pass
 
-    output_dir  = ROOT / "dataset"
+    output_dir = output_override or (ROOT / "dataset")
     # train/val 图片子目录 (#2)
     train_img_dir = output_dir / "images" / "train"
     val_img_dir   = output_dir / "images" / "val"
@@ -93,7 +97,7 @@ def main():
                 src = _P(img_path)
                 dst = split_img_dir / src.name
                 if src != dst:
-                    src.rename(dst)
+                    src.replace(dst)
 
                 n_labels, _ = generate_labels(
                     bboxes, width, height, output_dir, i, split=split
