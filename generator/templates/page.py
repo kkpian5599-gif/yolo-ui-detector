@@ -9,7 +9,7 @@ P3 新增：
 import random
 from ..config import PAGE_SIZES, PAGE_SIZE_WEIGHTS, DARK, ROOT, RANKING_TITLES
 from .button import generate_button_html
-from .input import generate_input_html, generate_checkbox_html, generate_radio_html, generate_select_html, generate_textarea_html
+from .input import generate_input_html, generate_checkbox_html, generate_radio_html, generate_select_html, generate_textarea_html, generate_select_group_html
 from .modal import (
     generate_modal_html, generate_overlay_html,
     generate_link_html, generate_icon_html,
@@ -158,8 +158,11 @@ def generate_page():
     # 决定页面类型（P3：新增 table、navbar）
     page_type = random.choices(
         ["form", "mixed", "dashboard", "login", "textarea_focus", "icon_grid",
-         "table", "navbar", "ranking_list", "news_feed", "social_card"],
-        weights=[0.18, 0.15, 0.08, 0.10, 0.13, 0.08, 0.06, 0.04, 0.07, 0.07, 0.04]
+         "table", "navbar", "ranking_list", "news_feed", "social_card",
+         "select_filter", "link_focus"],
+        weights=[0.15, 0.12, 0.07, 0.08, 0.10, 0.06,
+                 0.06, 0.04, 0.07, 0.08, 0.04,
+                 0.07, 0.06]
     )[0]
 
     body_parts = []
@@ -185,6 +188,10 @@ def generate_page():
         body_parts.append(_news_feed_layout())
     elif page_type == "social_card":
         body_parts.append(_social_card_layout())
+    elif page_type == "select_filter":
+        body_parts.append(_select_filter_layout())
+    elif page_type == "link_focus":
+        body_parts.append(_link_focus_layout())
     else:
         body_parts.append(_login_layout())
 
@@ -1014,4 +1021,333 @@ def _social_card_layout():
             f'</div>'
         )
 
-    return f'<div style="padding:24px;max-width:680px;">{"" .join(card_parts)}</div>', metas_card
+    return f'<div style="padding:24px;max-width:680px;">{" ".join(card_parts)}</div>', metas_card
+
+
+# ─── 新增: Select 筛选密集布局 ──────────────────────────────
+def _select_filter_layout():
+    """生成以 select 为核心的筛选栏页面
+
+    训练目的: 提升 select 类别的 recall，让模型在筛选栏/表单/仪表盘中稳定检测下拉框
+    """
+    dark = random.random() < 0.25
+    bg       = random.choice(["#0f172a", "#111827"]) if dark else random.choice(["#fff", "#f8f9fa", "#f0f2f5"])
+    text_c   = "#e2e8f0" if dark else "#212529"
+    border_c = "#374151" if dark else "#e5e7eb"
+
+    layout_variant = random.choice([
+        "filter_bar",    # 横向筛选栏（电商/后台最常见）
+        "search_form",   # 竖向搜索表单（多行 select+input）
+        "settings_page", # 设置页（每行一个 label+select）
+        "multi_row",     # 多行多列 select 网格
+    ])
+
+    parts = []
+    metas = []
+
+    if layout_variant == "filter_bar":
+        # 横向工具栏：搜索框 + 多个 select + 按钮
+        title = random.choice(["商品列表", "订单管理", "用户管理", "Product List", "Order Management"])
+        parts.append(f'<h3 style="font-weight:500;margin-bottom:16px;color:{text_c};">{title}</h3>')
+        bar_parts = []
+        # 搜索 input
+        hi, mi = generate_input_html()
+        bar_parts.append(f'<div style="display:inline-block;margin-right:8px;">{hi}</div>')
+        metas.append(mi)
+        # 3-5 个 select
+        n_sel = random.randint(3, 5)
+        for _ in range(n_sel):
+            hs, ms = generate_select_html()
+            bar_parts.append(f'<div style="display:inline-block;margin-right:8px;vertical-align:top;">{hs}</div>')
+            metas.append(ms)
+        # 操作按钮
+        from .button import generate_button_html
+        hb, mb = generate_button_html()
+        bar_parts.append(f'<div style="display:inline-block;">{hb}</div>')
+        metas.append(mb)
+        bar_style = f"display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;padding:16px;background:{bg};border-radius:8px;border:1px solid {border_c};margin-bottom:16px;"
+        parts.append(f'<div style="{bar_style}">{ "".join(bar_parts)}</div>')
+        # 下面一个表格（只生成表头，简化）
+        th_style = f"padding:10px 14px;text-align:left;font-size:13px;font-weight:600;background:{bg};color:{text_c};border-bottom:2px solid {border_c};"
+        cols = random.choice([["名称","状态","分类","操作"],["Name","Status","Type","Actions"]])
+        ths = "".join(f'<th style="{th_style}">{c}</th>' for c in cols)
+        parts.append(f'<table style="width:100%;border-collapse:collapse;"><thead><tr>{ths}</tr></thead></table>')
+        container = f'<div style="padding:24px;background:{bg};min-height:100vh;">{" ".join(parts)}</div>'
+
+    elif layout_variant == "search_form":
+        title = random.choice(["高级搜索", "Advanced Search", "条件筛选", "Filter"])
+        parts.append(f'<h3 style="font-weight:500;margin-bottom:20px;color:{text_c};">{title}</h3>')
+        n = random.randint(4, 7)
+        for _ in range(n):
+            t = random.choices(["select", "select", "input"], weights=[60, 30, 10])[0]
+            if t == "select":
+                h, m = generate_select_html()
+            else:
+                h, m = generate_input_html()
+            parts.append(f'<div style="margin-bottom:14px;">{h}</div>')
+            metas.append(m)
+        from .button import generate_button_html
+        hb, mb = generate_button_html()
+        parts.append(f'<div style="margin-top:8px;">{hb}</div>')
+        metas.append(mb)
+        card_style = f"background:{bg};border-radius:8px;padding:24px;max-width:480px;border:1px solid {border_c};"
+        container = f'<div style="padding:24px;"><div style="{card_style}">{" ".join(parts)}</div></div>'
+
+    elif layout_variant == "settings_page":
+        title = random.choice(["系统设置", "偏好设置", "Settings", "Preferences"])
+        parts.append(f'<h2 style="font-weight:500;margin-bottom:24px;color:{text_c};">{title}</h2>')
+        setting_items = [
+            ("语言", ["简体中文", "繁體中文", "English", "日本語"]),
+            ("时区", ["UTC+8", "UTC+0", "UTC-5", "UTC+9"]),
+            ("主题", ["亮色", "暗色", "跟随系统", "Light", "Dark"]),
+            ("字体大小", ["小", "中", "大", "Small", "Medium", "Large"]),
+            ("Language", ["Chinese", "English", "Japanese"]),
+            ("Theme", ["Light", "Dark", "System"]),
+            ("Font Size", ["Small", "Medium", "Large"]),
+            ("Timezone", ["UTC+8", "UTC+0", "EST", "PST"]),
+        ]
+        n_settings = random.randint(3, 6)
+        chosen = random.sample(setting_items, min(n_settings, len(setting_items)))
+        for lbl_text, opts in chosen:
+            n_opts = random.randint(2, min(4, len(opts)))
+            opts_sample = opts[:n_opts]
+            opts_html = "".join(f'<option>{o}</option>' for o in opts_sample)
+            sel_style = (
+                f"width:200px;height:34px;padding:4px 28px 4px 10px;"
+                f"font-size:13px;border-radius:6px;"
+                f"border:1px solid {border_c};"
+                f"background:{bg};color:{text_c};"
+                f"appearance:none;-webkit-appearance:none;"
+                f"background-image:url('data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 16 16%22%3E%3Cpath fill%3D%22none%22 stroke%3D%22%23999%22 stroke-width%3D%222%22 d%3D%22M2 5l6 6 6-6%22%2F%3E%3C%2Fsvg%3E');"
+                f"background-repeat:no-repeat;background-position:right 8px center;background-size:12px;"
+                f"cursor:pointer;"
+            )
+            row_style = f"display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid {border_c};"
+            lbl_style = f"font-size:14px;color:{text_c};"
+            sel_html = f'<select style="{sel_style}">{opts_html}</select>'
+            parts.append(f'<div style="{row_style}"><span style="{lbl_style}">{lbl_text}</span>{sel_html}</div>')
+            metas.append({"type": "select", "style": "settings", "options": n_opts, "disabled": False})
+        card_style = f"background:{bg};border-radius:8px;padding:24px;max-width:600px;border:1px solid {border_c};"
+        container = f'<div style="padding:24px;"><div style="{card_style}">{" ".join(parts)}</div></div>'
+
+    else:  # multi_row
+        title = random.choice(["批量筛选", "数据分析", "报表设置", "Report Settings"])
+        parts.append(f'<h3 style="font-weight:500;margin-bottom:16px;color:{text_c};">{title}</h3>')
+        rows = random.randint(2, 4)
+        for _ in range(rows):
+            grp_html, grp_metas = generate_select_group_html()
+            parts.append(f'<div style="margin-bottom:12px;">{grp_html}</div>')
+            metas.extend(grp_metas)
+        from .button import generate_button_html
+        hb, mb = generate_button_html()
+        parts.append(f'<div style="margin-top:16px;">{hb}</div>')
+        metas.append(mb)
+        container = f'<div style="padding:24px;background:{bg};">{" ".join(parts)}</div>'
+
+    return container, metas
+
+
+# ─── 新增: Link 密集布局 ─────────────────────────────────────
+def _link_focus_layout():
+    """生成以超链接为核心的页面
+
+    训练目的: 提升 link 类别的 recall，涵盖面包屑/导航菜单/文章列表/侧边栏链接等场景
+    """
+    from ..config import LINK_TEXTS, RANKING_TITLES
+    dark = random.random() < 0.2
+    bg       = random.choice(["#0f172a", "#111827"]) if dark else random.choice(["#fff", "#f8f9fa"])
+    text_c   = "#e2e8f0" if dark else "#212529"
+    link_c   = random.choice(["#0d6efd", "#1677ff", "#0969da", "#1d4ed8"])
+    border_c = "#374151" if dark else "#e5e7eb"
+    sub_c    = "#94a3b8" if dark else "#6b7280"
+
+    layout_variant = random.choice([
+        "breadcrumb_nav",    # 面包屑 + 侧边导航 + 内容链接
+        "article_links",     # 文章标题列表（纯链接）
+        "sidebar_menu",      # 侧边栏多级链接菜单
+        "link_cloud",        # 标签云风格链接
+        "mixed_links",       # 混合：带按钮/图标的行内链接
+    ])
+
+    parts = []
+    metas = []
+
+    if layout_variant == "breadcrumb_nav":
+        # 面包屑导航
+        crumb_items = random.choice([
+            ["首页", "产品", "详情"],
+            ["Home", "Products", "Detail"],
+            ["控制台", "用户管理", "编辑"],
+            ["Dashboard", "Reports", "Monthly"],
+        ])
+        sep = random.choice(["/", ">", "»", "·"])
+        crumb_parts = []
+        for i, item in enumerate(crumb_items):
+            if i < len(crumb_items) - 1:
+                cs = f"color:{link_c};font-size:14px;text-decoration:none;cursor:pointer;"
+                crumb_parts.append(f'<a href="#" style="{cs}">{item}</a>')
+                metas.append({"type": "link", "style": "breadcrumb", "text": item})
+            else:
+                crumb_parts.append(f'<span style="color:{sub_c};font-size:14px;">{item}</span>')
+            if i < len(crumb_items) - 1:
+                crumb_parts.append(f'<span style="color:{sub_c};margin:0 6px;font-size:14px;">{sep}</span>')
+        crumb_html = f'<div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:20px;">{" ".join(crumb_parts)}</div>'
+        parts.append(crumb_html)
+
+        # 侧边导航 + 内容链接列表
+        nav_items = random.sample(LINK_TEXTS[:15], random.randint(4, 8))
+        nav_parts = []
+        for item in nav_items:
+            is_active = random.random() < 0.2
+            ns = (
+                f"display:block;padding:8px 12px;font-size:14px;"
+                f"color:{'#fff' if is_active else link_c};"
+                f"background:{'#0d6efd' if is_active else 'transparent'};"
+                f"text-decoration:none;border-radius:4px;margin-bottom:2px;"
+            )
+            nav_parts.append(f'<a href="#" style="{ns}">{item}</a>')
+            metas.append({"type": "link", "style": "sidebar", "text": item})
+        nav_style = f"width:180px;float:left;padding:12px;background:{bg};border-right:1px solid {border_c};min-height:300px;"
+
+        content_links = random.choices(RANKING_TITLES, k=random.randint(5, 10))
+        cl_parts = []
+        for cl in content_links:
+            cls = (
+                f"display:block;font-size:{random.choice(['14px','15px','16px'])};"
+                f"color:{text_c};text-decoration:none;cursor:pointer;"
+                f"padding:8px 0;border-bottom:1px solid {border_c};"
+                f"font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;"
+            )
+            cl_parts.append(f'<a href="#" style="{cls}">{cl}</a>')
+            metas.append({"type": "link", "style": "news_row", "text": cl})
+        content_html = f'<div style="margin-left:200px;padding:16px;">{" ".join(cl_parts)}</div>'
+        nav_html = f'<div style="{nav_style}">{" ".join(nav_parts)}</div>'
+        parts.append(f'<div style="overflow:hidden;">{nav_html}{content_html}</div>')
+        container = f'<div style="padding:24px;background:{bg};">{ "".join(parts)}</div>'
+
+    elif layout_variant == "article_links":
+        # 文章标题列表（纯链接行，带时间戳）
+        title = random.choice(["最新文章", "推荐阅读", "Latest Articles", "Related Posts"])
+        parts.append(f'<h2 style="font-weight:500;margin-bottom:16px;color:{text_c};font-size:20px;">{title}</h2>')
+        n = random.randint(8, 16)
+        titles = random.choices(RANKING_TITLES, k=n)
+        for t in titles:
+            fs = random.choice(["14px", "15px", "16px"])
+            deco = random.choice(["none", "underline"])
+            ls = (
+                f"display:block;font-size:{fs};"
+                f"color:{link_c};text-decoration:{deco};cursor:pointer;"
+                f"padding:{random.choice(['8px 0','10px 0','6px 0'])};"
+                f"border-bottom:1px solid {border_c};"
+                f"font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;"
+            )
+            date_s = f"font-size:12px;color:{sub_c};margin-top:2px;"
+            date = random.choice(["2025-01-15", "2025-03-20", "1小时前", "Yesterday"])
+            parts.append(
+                f'<div><a href="#" style="{ls}">{t}</a>'
+                f'<div style="{date_s}">{date}</div></div>'
+            )
+            metas.append({"type": "link", "style": "article", "text": t})
+        container = f'<div style="padding:24px;max-width:700px;background:{bg};">{" ".join(parts)}</div>'
+
+    elif layout_variant == "sidebar_menu":
+        # 侧边栏多级菜单
+        menu_groups = [
+            {"title": "主菜单", "items": ["首页", "数据概览", "报表中心"]},
+            {"title": "用户管理", "items": ["用户列表", "角色权限", "审计日志"]},
+            {"title": "系统设置", "items": ["基础设置", "通知配置", "安全策略"]},
+            {"title": "Main", "items": ["Dashboard", "Analytics", "Reports"]},
+            {"title": "Admin", "items": ["Users", "Roles", "Audit Log"]},
+        ]
+        chosen_groups = random.sample(menu_groups, random.randint(2, 4))
+        sidebar_parts = []
+        for group in chosen_groups:
+            g_title_style = f"font-size:11px;font-weight:600;color:{sub_c};text-transform:uppercase;padding:12px 16px 4px;letter-spacing:0.05em;"
+            sidebar_parts.append(f'<div style="{g_title_style}">{group["title"]}</div>')
+            for item in group["items"]:
+                is_active = random.random() < 0.15
+                accent = "#eff6ff" if not dark else "#1e3a5f"
+                item_style = (
+                    f"display:block;padding:8px 16px;font-size:14px;"
+                    f"color:{'#0d6efd' if is_active else text_c};"
+                    f"background:{'accent' if is_active else 'transparent'};"
+                    f"text-decoration:none;border-radius:4px;margin:1px 8px;"
+                    f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+                )
+                sidebar_parts.append(f'<a href="#" style="{item_style}">{item}</a>')
+                metas.append({"type": "link", "style": "sidebar_menu", "text": item})
+        sidebar_w = random.choice([200, 220, 240])
+        sidebar_style = (
+            f"width:{sidebar_w}px;min-height:500px;"
+            f"background:{bg};border-right:1px solid {border_c};"
+            f"float:left;padding-top:8px;"
+        )
+        sidebar_html = f'<div style="{sidebar_style}">{ "".join(sidebar_parts)}</div>'
+        # 右侧内容
+        content_ps = []
+        for _ in range(random.randint(2, 4)):
+            t = random.choice(RANKING_TITLES)
+            cs = (
+                f"display:block;color:{link_c};font-size:15px;"
+                f"text-decoration:none;cursor:pointer;margin-bottom:12px;"
+            )
+            content_ps.append(f'<a href="#" style="{cs}">{t}</a>')
+            metas.append({"type": "link", "style": "content", "text": t})
+        content_html = f'<div style="margin-left:{sidebar_w+20}px;padding:24px;">{" ".join(content_ps)}</div>'
+        container = f'<div style="overflow:hidden;background:{bg};min-height:100vh;">{sidebar_html}{content_html}</div>'
+
+    elif layout_variant == "link_cloud":
+        # 标签云：大量短链接，不同字号颜色
+        title = random.choice(["热门标签", "Popular Tags", "分类导航", "Topics"])
+        parts.append(f'<h3 style="font-weight:500;margin-bottom:16px;color:{text_c};">{title}</h3>')
+        tags = random.choices(LINK_TEXTS, k=random.randint(12, 24))
+        tag_parts = []
+        colors = [link_c, "#7c3aed", "#059669", "#d97706", "#e11d48", "#0891b2"]
+        for tag in tags:
+            tc = random.choice(colors)
+            fs = random.choice(["12px", "13px", "14px", "15px", "16px", "18px"])
+            deco = random.choice(["none", "underline"])
+            bg_tag = tc + "12" if random.random() < 0.5 else "transparent"
+            ts = (
+                f"display:inline-block;color:{tc};font-size:{fs};"
+                f"text-decoration:{deco};cursor:pointer;"
+                f"padding:4px 10px;margin:4px;border-radius:4px;"
+                f"background:{bg_tag};"
+            )
+            tag_parts.append(f'<a href="#" style="{ts}">{tag}</a>')
+            metas.append({"type": "link", "style": "tag", "text": tag})
+        parts.append(f'<div style="line-height:2;">{" ".join(tag_parts)}</div>')
+        container = f'<div style="padding:24px;max-width:700px;background:{bg};">{" ".join(parts)}</div>'
+
+    else:  # mixed_links
+        # 混合：短链接 + 操作链接 + 新闻标题链接
+        parts.append(f'<div style="margin-bottom:24px;">')
+        # 顶部短链接行
+        short_links = random.sample(LINK_TEXTS[:12], random.randint(4, 7))
+        for sl in short_links:
+            ss = (
+                f"color:{link_c};font-size:{random.choice(['13px','14px'])};"
+                f"text-decoration:{random.choice(['none','underline'])};"
+                f"cursor:pointer;margin-right:16px;"
+            )
+            parts.append(f'<a href="#" style="{ss}">{sl}</a>')
+            metas.append({"type": "link", "style": "nav", "text": sl})
+        parts.append('</div>')
+
+        # 下方新闻列表
+        parts.append(f'<div style="border-top:1px solid {border_c};padding-top:16px;">')
+        n = random.randint(5, 10)
+        news = random.choices(RANKING_TITLES, k=n)
+        for n_title in news:
+            ns = (
+                f"display:block;color:{text_c};font-size:{random.choice(['14px','15px'])};"
+                f"text-decoration:none;cursor:pointer;"
+                f"padding:8px 0;border-bottom:1px solid {border_c};"
+                f"font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;"
+            )
+            parts.append(f'<a href="#" style="{ns}">{n_title}</a>')
+            metas.append({"type": "link", "style": "news_row", "text": n_title})
+        parts.append('</div>')
+        container = f'<div style="padding:24px;max-width:700px;background:{bg};">{ "".join(parts)}</div>'
+
+    return container, metas

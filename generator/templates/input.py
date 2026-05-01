@@ -292,7 +292,7 @@ def generate_radio_html():
 
 
 def generate_select_html():
-    """生成下拉选择框 — 多种设计风格"""
+    """生成下拉选择框 — 多种设计风格（含自定义下拉、多选、暗色、标签式等）"""
     options_zh = ["请选择", "北京", "上海", "广州", "深圳", "成都", "杭州", "武汉",
                   "男", "女", "保密", "启用", "禁用", "待审核",
                   "选项A", "选项B", "选项C", "选项D"]
@@ -304,13 +304,15 @@ def generate_select_html():
 
     w = random.randint(120, 320)
     style_type = random.choices(
-        ["standard", "ant_design", "element_plus", "filled", "borderless", "rounded"],
-        weights=[25, 20, 20, 15, 10, 10]
+        ["standard", "ant_design", "element_plus", "filled", "borderless", "rounded",
+         "dark_theme", "multi_select", "custom_div", "pill_tag", "material", "bootstrap5"],
+        weights=[18, 14, 14, 10, 8, 8, 7, 5, 6, 4, 4, 4]
     )[0]
 
     # 下拉箭头 SVG
     arrow_svg = "url('data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 16 16%22%3E%3Cpath fill%3D%22none%22 stroke%3D%22%23666%22 stroke-width%3D%222%22 d%3D%22M2 5l6 6 6-6%22%2F%3E%3C%2Fsvg%3E')"
     arrow_dark = "url('data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 16 16%22%3E%3Cpath fill%3D%22none%22 stroke%3D%22%23999%22 stroke-width%3D%222%22 d%3D%22M2 5l6 6 6-6%22%2F%3E%3C%2Fsvg%3E')"
+    arrow_white = "url('data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 16 16%22%3E%3Cpath fill%3D%22none%22 stroke%3D%22%23aaa%22 stroke-width%3D%222%22 d%3D%22M2 5l6 6 6-6%22%2F%3E%3C%2Fsvg%3E')"
 
     base_arrow = (
         f"appearance:none;-webkit-appearance:none;"
@@ -321,6 +323,69 @@ def generate_select_html():
         f"cursor:{'not-allowed' if disabled else 'pointer'};"
     )
 
+    # ── custom_div / pill_tag 返回特殊 HTML（非 <select>）──────────
+    if style_type == "custom_div":
+        # 用 div 模拟的自定义下拉（视觉上和 <select> 一样，但 DOM 不同）
+        color = random.choice(["#0d6efd", "#1677ff", "#7c3aed", "#212529"])
+        border_c = random.choice(["#dee2e6", "#d9d9d9", "#dcdfe6", color])
+        selected_text = options[0]
+        radius = random.choice(["4px", "6px", "8px", "20px"])
+        div_style = (
+            f"display:inline-flex;align-items:center;justify-content:space-between;"
+            f"width:{w}px;height:{random.choice([32,36,38,40])}px;padding:0 12px;"
+            f"border:1px solid {border_c};border-radius:{radius};"
+            f"background:#fff;color:#212529;font-size:14px;cursor:pointer;"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            f"box-sizing:border-box;user-select:none;"
+            f"data-yolo-class:select;"
+        )
+        arrow = "&#8964;"  # ⌄
+        html = (
+            f'<div style="{div_style}" data-yolo-class="select">'
+            f'<span>{selected_text}</span>'
+            f'<span style="color:#999;font-size:12px;">{arrow}</span>'
+            f'</div>'
+        )
+        if random.random() < 0.6:
+            lbl = random.choice(["分类", "筛选", "排序", "Category", "Filter", "Sort"])
+            lbl_style = "display:block;font-size:13px;margin-bottom:4px;color:#555;"
+            html = f'<label style="{lbl_style}">{lbl}</label>{html}'
+        return html, {"type": "select", "style": "custom_div", "options": len(options), "disabled": False}
+
+    elif style_type == "pill_tag":
+        # 标签式多选显示（像已选中的 tag chips）
+        accent = random.choice(["#0d6efd", "#1677ff", "#7c3aed", "#059669", "#e11d48"])
+        tag_bg = accent + "18"
+        container_style = (
+            f"display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;"
+            f"min-width:{w}px;padding:6px 10px;"
+            f"border:1px solid #dee2e6;border-radius:8px;background:#fff;"
+            f"cursor:pointer;box-sizing:border-box;"
+        )
+        chosen = random.sample(options, min(random.randint(1, 3), len(options)))
+        tags_html = ""
+        for tag in chosen:
+            tag_style = (
+                f"display:inline-flex;align-items:center;gap:4px;"
+                f"padding:2px 8px;border-radius:12px;"
+                f"background:{tag_bg};color:{accent};font-size:12px;"
+                f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            )
+            tags_html += f'<span style="{tag_style}">{tag} <span style="cursor:pointer;">✕</span></span>'
+        placeholder_style = f"font-size:13px;color:#999;font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+        html = (
+            f'<div style="{container_style}" data-yolo-class="select">'
+            f'{tags_html}'
+            f'<span style="{placeholder_style}">+ 添加</span>'
+            f'</div>'
+        )
+        if random.random() < 0.6:
+            lbl = random.choice(["标签", "分类", "Tags", "Categories"])
+            lbl_style = "display:block;font-size:13px;margin-bottom:4px;color:#555;"
+            html = f'<label style="{lbl_style}">{lbl}</label>{html}'
+        return html, {"type": "select", "style": "pill_tag", "options": len(options), "disabled": False}
+
+    # ── 原生 <select> 变体 ───────────────────────────────────────
     if style_type == "standard":
         style = (
             f"width:{w}px;height:38px;padding:6px 32px 6px 12px;"
@@ -330,10 +395,9 @@ def generate_select_html():
             f"{base_arrow}"
         )
     elif style_type == "ant_design":
-        # Ant Design 风格：4px 圆角，hover 蓝色边框
-        size = random.choice(["sm", "md", "lg"])
-        h = {"sm": "24px", "md": "32px", "lg": "40px"}[size]
-        fs = {"sm": "12px", "md": "14px", "lg": "16px"}[size]
+        sz = random.choice(["sm", "md", "lg"])
+        h = {"sm": "24px", "md": "32px", "lg": "40px"}[sz]
+        fs = {"sm": "12px", "md": "14px", "lg": "16px"}[sz]
         style = (
             f"width:{w}px;height:{h};padding:0 30px 0 11px;"
             f"font-size:{fs};border-radius:4px;"
@@ -342,9 +406,8 @@ def generate_select_html():
             f"{base_arrow}"
         )
     elif style_type == "element_plus":
-        # Element Plus 风格：6px 圆角，灰色边框
-        size = random.choice(["default", "large", "small"])
-        h = {"small": "28px", "default": "32px", "large": "40px"}[size]
+        sz = random.choice(["default", "large", "small"])
+        h = {"small": "28px", "default": "32px", "large": "40px"}[sz]
         style = (
             f"width:{w}px;height:{h};padding:0 30px 0 12px;"
             f"font-size:14px;border-radius:6px;"
@@ -369,7 +432,7 @@ def generate_select_html():
             f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
             f"{base_arrow}"
         )
-    else:  # rounded
+    elif style_type == "rounded":
         color = random.choice(["#0d6efd", "#1677ff", "#7c3aed", "#059669"])
         style = (
             f"width:{w}px;height:36px;padding:6px 30px 6px 14px;"
@@ -377,6 +440,55 @@ def generate_select_html():
             f"border:2px solid {color};background:#fff;color:{color};"
             f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
             f"{base_arrow}"
+        )
+    elif style_type == "dark_theme":
+        bg_c = random.choice(["#1e1e2e", "#0f172a", "#111827", "#1c1c1c", "#252526"])
+        border_c = random.choice(["#374151", "#3c3c3c", "#444", "#30363d"])
+        text_c = random.choice(["#e2e8f0", "#d1d5db", "#cdd9e5", "#e6edf3"])
+        style = (
+            f"width:{w}px;height:36px;padding:6px 30px 6px 12px;"
+            f"font-size:14px;border-radius:6px;"
+            f"border:1px solid {border_c};background:{bg_c};color:{text_c};"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            f"{base_arrow.replace(arrow_svg, arrow_white)}"
+        )
+    elif style_type == "multi_select":
+        # size > 1 显示多行，像 listbox
+        n_visible = random.choice([3, 4, 5])
+        style = (
+            f"width:{w}px;padding:4px;"
+            f"font-size:13px;border-radius:6px;"
+            f"border:1px solid #dee2e6;background:#fff;color:#212529;"
+            f"font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            f"cursor:pointer;"
+        )
+        option_html = "".join(
+            f'<option{" selected" if i < 2 else ""}>{o}</option>'
+            for i, o in enumerate(options)
+        )
+        html = f'<select multiple size="{n_visible}" style="{style}">{option_html}</select>'
+        if random.random() < 0.6:
+            lbl = random.choice(["多选", "选择项目", "Multi-select", "Select items"])
+            lbl_style = "display:block;font-size:13px;margin-bottom:4px;color:#555;"
+            html = f'<label style="{lbl_style}">{lbl}</label>{html}'
+        return html, {"type": "select", "style": "multi_select", "options": len(options), "disabled": False}
+    elif style_type == "material":
+        # Material Design 下划线风格
+        accent = random.choice(["#1976d2", "#7c3aed", "#059669", "#e11d48"])
+        style = (
+            f"width:{w}px;height:40px;padding:8px 28px 8px 0;"
+            f"font-size:14px;border-radius:0;"
+            f"border:none;border-bottom:2px solid {accent};background:transparent;color:#212529;"
+            f"font-family:Roboto,-apple-system,sans-serif;"
+            f"{base_arrow}"
+        )
+    else:  # bootstrap5
+        style = (
+            f"width:{w}px;height:38px;padding:6px 32px 6px 12px;"
+            f"font-size:14px;border-radius:0.375rem;"
+            f"border:1px solid #ced4da;background:#fff;color:#212529;"
+            f"font-family:system-ui,-apple-system,sans-serif;"
+            f"{base_arrow}box-shadow:inset 0 1px 2px rgba(0,0,0,0.075);"
         )
 
     if disabled:
@@ -396,6 +508,18 @@ def generate_select_html():
         html = f'<label style="{lbl_style}">{lbl}</label>{html}'
 
     return html, {"type": "select", "style": style_type, "options": len(options), "disabled": disabled}
+
+
+def generate_select_group_html():
+    """生成一组 select（2-5个），用于 select 密集页面（筛选栏、表单等）"""
+    n = random.randint(2, 5)
+    parts = []
+    metas = []
+    for _ in range(n):
+        h, m = generate_select_html()
+        parts.append(f'<div style="margin-bottom:12px;display:inline-block;margin-right:12px;vertical-align:top;">{h}</div>')
+        metas.append(m)
+    return "".join(parts), metas
 
 
 def generate_textarea_html():
