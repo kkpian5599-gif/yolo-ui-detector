@@ -5,11 +5,14 @@
   #5  截图后 Pillow 轻度图像增强（色调、亮度、轻微模糊）
   #8  持久化 browser / page，避免每张图冷启动
   #9  data-yolo-class 属性识别 modal/overlay
+  P2-A  networkidle 等待替换固定 400ms，防止字体图标未加载
+  P2-B  增强补全：高斯噪点 + 随机 JPEG 质量（70-95）
 """
 import random
 import tempfile
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 from playwright.sync_api import sync_playwright, Browser, Page
 
@@ -75,7 +78,12 @@ _EXTRACT_BBOXES_JS = """() => {
 # Pillow 轻度增强 (#5)
 # ──────────────────────────────────────────────
 def _augment_image(img_path: str) -> None:
-    """对截图施加随机轻度变换，提升模型鲁棒性。"""
+    """对截图施加随机轻度变换，提升模型鲁棒性。
+
+    P2-B 补全：
+      - 高斯噪点（15% 概率，模拟低质量屏幕）
+      - 随机 JPEG 质量 70-95（模拟截图工具压缩）
+    """
     roll = random.random()
     if roll > 0.45:          # 约 55% 的图不做增强（保留原始干净图）
         return
@@ -101,7 +109,17 @@ def _augment_image(img_path: str) -> None:
     if random.random() < 0.20:
         img = img.filter(ImageFilter.GaussianBlur(radius=random.uniform(0.3, 0.7)))
 
-    img.save(img_path, "JPEG", quality=92)
+    # P2-B: 高斯噪点（模拟低质量屏幕/截图噪声）
+    if random.random() < 0.15:
+        arr = np.array(img, dtype=np.float32)
+        sigma = random.uniform(1.5, 4.0)          # 噪点强度
+        noise = np.random.normal(0, sigma, arr.shape)
+        arr = np.clip(arr + noise, 0, 255).astype(np.uint8)
+        img = Image.fromarray(arr)
+
+    # P2-B: 随机 JPEG 压缩质量（模拟不同截图工具的压缩差异）
+    jpeg_quality = random.randint(72, 95)
+    img.save(img_path, "JPEG", quality=jpeg_quality)
 
 
 # ──────────────────────────────────────────────
@@ -160,7 +178,11 @@ class BrowserSession:
         tmp.close()
 
         page.goto(f"file://{tmp.name}")
-        page.wait_for_timeout(400)
+        # P2-A: 等待网络空闲（字体图标加载完毕），超时后回退到固定延迟
+        try:
+            page.wait_for_load_state("networkidle", timeout=3000)
+        except Exception:
+            page.wait_for_timeout(400)
 
         img_path = output_dir / "images" / f"{index:05d}.jpg"
         img_path.parent.mkdir(parents=True, exist_ok=True)

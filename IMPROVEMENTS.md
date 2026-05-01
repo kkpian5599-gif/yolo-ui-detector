@@ -32,9 +32,9 @@
 
 | # | 问题 | 文件 | 状态 |
 |---|------|------|------|
-| 5 | `wait_for_timeout(400)` 改为 `wait_for_load_state('networkidle')`，防止字体图标未加载就截图 | `renderer.py` L163 | ⬜ |
-| 6 | Pillow 增强补全：高斯噪点（15%概率）、随机 JPEG 质量（70-95）| `renderer.py` `_augment_image()` | ⬜ |
-| 7 | 生成进度增加 ETA 估算（已用时 / 当前速度 → 剩余时间）| `main.py` | ⬜ |
+| 5 | `wait_for_timeout(400)` 改为 `wait_for_load_state('networkidle')`，防止字体图标未加载就截图 | `renderer.py` L163 | ✅ |
+| 6 | Pillow 增强补全：高斯噪点（15%概率）、随机 JPEG 质量（70-95）| `renderer.py` `_augment_image()` | ✅ |
+| 7 | 生成进度增加 ETA 估算（已用时 / 当前速度 → 剩余时间）| `main.py` | ✅ |
 
 **提交策略**：Phase 2 一次提交 `feat: augmentation improvements and render reliability`
 

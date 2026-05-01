@@ -3,8 +3,10 @@
 优化项：
   #2  images/train 和 images/val 独立子目录
   #8  持久化 BrowserSession，全流程复用同一个 Browser/Page
+  P2-C  进度输出增加 ETA 估算（速度 img/s + 剩余时间）
 """
 import sys
+import time
 from pathlib import Path
 
 from .config import ROOT, CLASSES, NUM_CLASSES
@@ -74,6 +76,7 @@ def main():
     total_labels = 0
     n_train = 0
     n_val   = 0
+    t_start = time.time()       # P2-C: ETA 计时开始
 
     # 持久化 Browser (#8)
     session: BrowserSession = get_session()
@@ -108,10 +111,16 @@ def main():
                 else:
                     n_val += 1
 
-                if (i - start + 1) % 20 == 0:
+                if (i - start + 1) % 20 == 0 or (i - start + 1) == count:
+                    done    = i - start + 1
+                    elapsed = time.time() - t_start
+                    speed   = done / elapsed if elapsed > 0 else 0
+                    remain  = (count - done) / speed if speed > 0 else 0
+                    eta_str = f"{int(remain//60)}m{int(remain%60):02d}s" if remain > 0 else "--"
                     print(
-                        f"  [{i - start + 1:4d}/{count}] img#{i:05d} "
-                        f"({split:5s}) {n_labels} labels | total: {total_labels}"
+                        f"  [{done:4d}/{count}] img#{i:05d} "
+                        f"({split:5s}) {n_labels} labels "
+                        f"| {speed:.1f}img/s ETA {eta_str}"
                     )
             except KeyboardInterrupt:
                 raise
