@@ -9,7 +9,7 @@ set -e  # 任何步骤出错立即停止
 # ── 参数默认值 ────────────────────────────────────────
 COUNT=500
 EPOCHS=60
-MODEL="yolo11s.pt"
+MODEL="yolo11m.pt"
 IMGSZ=640
 BATCH=16
 DEVICE=0
