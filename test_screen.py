@@ -42,6 +42,11 @@ COLORS = {
 CONF_THRESH = 0.4  # 置信度阈值（降低可看到更多框）
 NMS_THRESH  = 0.45
 
+# 截图裁剪区域 (x1, y1, x2, y2)，None 表示全屏不裁剪
+# 设置后只识别该区域，避免 4K 截图把元素压得太小
+# 示例：只取主显示器浏览器内容区（去掉书签栏和任务栏）
+CROP_REGION: tuple[int,int,int,int] | None = None
+
 # ── 加载模型 ─────────────────────────────────────────
 print(f"加载 ONNX 模型: {MODEL_PATH}")
 net = cv2.dnn.readNet(str(MODEL_PATH))
@@ -51,7 +56,7 @@ print("[OK] 模型加载完成\n")
 def take_screenshot() -> np.ndarray:
     """截取全屏，返回 BGR numpy 数组"""
     try:
-        import mss
+        import mss # noqa: C0415
         with mss.MSS() as sct:
             monitor = sct.monitors[0]  # 全屏（含多显示器用 [1] 只取主屏）
             shot = sct.grab(monitor)
@@ -70,14 +75,32 @@ def take_screenshot() -> np.ndarray:
     raise RuntimeError("请安装截图库：pip install mss 或 pip install pyautogui")
 
 
+INFER_SIZE = 640    # 模型导出时固定 640，OpenCV DNN 不支持动态输入
+
+
+def _letterbox(img: np.ndarray, size: int):
+    """等比缩放 + 灰边填充到 size×size，返回 (blob, scale, pad_x, pad_y)"""
+    h, w = img.shape[:2]
+    scale = min(size / w, size / h)
+    nw, nh = int(w * scale), int(h * scale)
+    resized = cv2.resize(img, (nw, nh), interpolation=cv2.INTER_LINEAR)
+    canvas = np.full((size, size, 3), 114, dtype=np.uint8)
+    pad_x = (size - nw) // 2
+    pad_y = (size - nh) // 2
+    canvas[pad_y:pad_y + nh, pad_x:pad_x + nw] = resized
+    # BGR→RGB, HWC→NCHW, 归一化
+    blob = canvas[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+    blob = blob[np.newaxis]          # (1, 3, size, size)
+    return blob, scale, pad_x, pad_y
+
+
 def detect(img: np.ndarray) -> list[dict]:
     """运行 ONNX 推理，返回检测结果列表"""
-    h, w = img.shape[:2]
+    blob, scale, pad_x, pad_y = _letterbox(img, INFER_SIZE)
 
-    blob = cv2.dnn.blobFromImage(img, 1/255.0, (640, 640), swapRB=True, crop=False)
     net.setInput(blob)
-    outputs = net.forward()   # shape: (1, 13, 8400)
-    preds = outputs[0]        # (13, 8400)  — 4 bbox + 9 classes
+    outputs = net.forward()          # (1, nc+4, num_anchors)
+    preds = outputs[0]               # (nc+4, num_anchors)
 
     boxes, scores, class_ids = [], [], []
 
@@ -88,12 +111,11 @@ def detect(img: np.ndarray) -> list[dict]:
             continue
         max_cls = int(np.argmax(cls_scores))
 
-        cx, cy, bw, bh = preds[0:4, i]
-        # 还原到原图坐标
-        cx = cx * w / 640
-        cy = cy * h / 640
-        bw = bw * w / 640
-        bh = bh * h / 640
+        # 模型输出坐标在 INFER_SIZE 空间，逆 letterbox 还原到原图
+        cx = (preds[0, i] - pad_x) / scale
+        cy = (preds[1, i] - pad_y) / scale
+        bw =  preds[2, i] / scale
+        bh =  preds[3, i] / scale
 
         x1 = int(cx - bw / 2)
         y1 = int(cy - bh / 2)
@@ -162,16 +184,26 @@ def print_summary(results: list[dict], elapsed_ms: float):
     print(f"{'─'*50}\n")
 
 
-def run_once(img_path: str | None = None, save_suffix: str = ""):
+def run_once(img_path: str | None = None, save_suffix: str = "", delay: int = 0):
     if img_path:
         img = cv2.imread(img_path)
         if img is None:
             raise FileNotFoundError(f"找不到图片: {img_path}")
         print(f"读取图片: {img_path}")
     else:
-        print("截取屏幕中...")
+        if delay > 0:
+            for i in range(delay, 0, -1):
+                print(f"  ⏳ {i} 秒后截图，请切换到目标窗口...", end="\r", flush=True)
+                time.sleep(1)
+            print("  📸 截图中...                    ")
+        else:
+            print("截取屏幕中...")
         img = take_screenshot()
         print(f"  截图尺寸: {img.shape[1]}x{img.shape[0]}")
+        if CROP_REGION:
+            x1, y1, x2, y2 = CROP_REGION
+            img = img[y1:y2, x1:x2]
+            print(f"  裁剪区域: {x2-x1}x{y2-y1} @ ({x1},{y1})")
 
     t0 = time.perf_counter()
     results = detect(img)
@@ -195,12 +227,12 @@ def run_once(img_path: str | None = None, save_suffix: str = ""):
         os.system(f'xdg-open "{out_path}"')
 
 
-def run_loop(interval: int = 5):
+def run_loop(interval: int = 5, delay: int = 0):
     print(f"持续模式：每 {interval} 秒截图一次，按 Ctrl+C 退出\n")
     i = 0
     try:
         while True:
-            run_once(save_suffix=f"_{i:03d}")
+            run_once(save_suffix=f"_{i:03d}", delay=delay if i == 0 else 0)
             i += 1
             print(f"等待 {interval} 秒... (Ctrl+C 退出)")
             time.sleep(interval)
@@ -226,7 +258,7 @@ def run_interactive():
             break
         note = input("  备注（当前页面名称，可留空）> ").strip()
         suffix = f"_{i:03d}_{note.replace(' ','_')}" if note else f"_{i:03d}"
-        run_once(save_suffix=suffix)
+        run_once(save_suffix=suffix, delay=DELAY_SECS)
         i += 1
 
 
@@ -238,13 +270,19 @@ if __name__ == "__main__":
     parser.add_argument("--interactive", action="store_true",               help="交互式：按Enter截图")
     parser.add_argument("--interval",    type=int,            default=5,    help="loop 间隔秒数")
     parser.add_argument("--conf",        type=float,          default=0.4,  help="置信度阈值（默认0.4）")
+    parser.add_argument("--delay",       type=int,            default=3,    help="截图前倒计时秒数（默认3）")
+    parser.add_argument("--crop",        type=str,            default=None,
+                        help="裁剪区域 x1,y1,x2,y2（如 0,130,1920,1080）去掉书签栏/任务栏")
     args = parser.parse_args()
 
     CONF_THRESH = args.conf
+    DELAY_SECS  = args.delay
+    if args.crop:
+        CROP_REGION = tuple(int(v) for v in args.crop.split(","))  # type: ignore
 
     if args.interactive:
         run_interactive()
     elif args.loop:
-        run_loop(args.interval)
+        run_loop(args.interval, delay=DELAY_SECS)
     else:
-        run_once(img_path=args.file)
+        run_once(img_path=args.file, delay=DELAY_SECS)

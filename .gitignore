@@ -1,34 +1,18 @@
-# Virtual environment
-.venv/
-
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-
-# Generated dataset — regenerate on target machine
-# Cloud: python -m generator.main 300
+*.onnx
+*.pt
+*.pth
+runs/
+test_output/
+test_output_*/
+demo_output/
+zhipin_bot/
 dataset/images/
 dataset/labels/
-
-# Keep data.yaml (config, not data)
-!dataset/data.yaml
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Playwright browsers (downloaded separately)
-playwright-browsers/
-
-# Training artifacts
-runs/
-wandb/
-*.pt
-*.onnx
+*.jpg
+*.jpeg
+*.png
+*.bmp
+__pycache__/
+*.pyc
+node_modules/
+*.bk
